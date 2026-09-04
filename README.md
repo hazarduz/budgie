@@ -74,6 +74,12 @@ git, so it never has to touch GitHub.
   **admin**, who can add, remove, or reset the password of further
   logins from Settings → Users; logins added afterwards are
   **standard** by default.
+- **Backup & restore** — the admin can download a single JSON file with
+  everything in Budgie (every user's months, categories, accounts, debts,
+  and Christmas lists) from Settings → Backup, and restore it again later
+  — on the same install or a fresh one. Restoring is also offered right on
+  the "Create the first account" screen, so recovering after losing the
+  database entirely doesn't require an account to already exist.
 
 ## Tech stack
 
@@ -178,6 +184,12 @@ service in the browser — no personal or financial data leaves your
 instance, just the brand's own name. Every other entry gets a plain
 emoji with no network request, and if the favicon fails to load for any
 reason (offline, blocked), it falls back to an emoji automatically.
+
+Back up regularly (Settings → Backup) and store the file somewhere safe —
+it's the fastest way to move Budgie to a new server or recover from a
+lost database, but it does contain every user's login (as a bcrypt hash)
+and financial data, so treat it like a database dump, not something to
+casually email around.
 
 ---
 

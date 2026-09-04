@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { addMonths, type MonthKey } from "@/lib/months";
 import { verifySession, requireAdmin, getOptionalSession } from "@/lib/dal";
 import { provisionUserDefaults } from "@/lib/provision-user";
+import { deleteSession } from "@/lib/session";
+import { BACKUP_VERSION, isValidBackup, type BackupData } from "@/lib/backup";
 import { EntryType, Role, DebtDirection, Theme, type Prisma } from "@prisma/client";
 
 // ---------- Months ----------
@@ -731,6 +734,208 @@ export async function updateTheme(value: ThemePreference) {
   const { userId } = await verifySession();
   await prisma.user.update({ where: { id: userId }, data: { theme: value.toUpperCase() as Theme } });
   revalidatePath("/", "layout");
+}
+
+// ---------- Backup & restore (admin only) ----------
+//
+// Covers every user's data — not just the admin's own — since it's meant as
+// a full copy of the app's database. Original ids are kept as-is so a
+// restore can simply wipe and recreate everything in one transaction.
+
+export async function exportBackupData(): Promise<BackupData> {
+  await requireAdmin();
+
+  const [users, categories, accounts, months, entries, christmasSettings, christmasEntries, debts] =
+    await Promise.all([
+      prisma.user.findMany(),
+      prisma.category.findMany(),
+      prisma.account.findMany(),
+      prisma.month.findMany(),
+      prisma.entry.findMany(),
+      prisma.christmasSettings.findMany(),
+      prisma.christmasEntry.findMany(),
+      prisma.debt.findMany(),
+    ]);
+
+  return {
+    app: "budgie",
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    users: users.map((u) => ({
+      id: u.id,
+      username: u.username,
+      passwordHash: u.passwordHash,
+      role: u.role,
+      showEntryIcons: u.showEntryIcons,
+      theme: u.theme,
+      createdAt: u.createdAt.toISOString(),
+    })),
+    categories: categories.map((c) => ({
+      id: c.id,
+      userId: c.userId,
+      name: c.name,
+      color: c.color,
+      isDefault: c.isDefault,
+      sortOrder: c.sortOrder,
+      createdAt: c.createdAt.toISOString(),
+    })),
+    accounts: accounts.map((a) => ({
+      id: a.id,
+      userId: a.userId,
+      name: a.name,
+      color: a.color,
+      sortOrder: a.sortOrder,
+      createdAt: a.createdAt.toISOString(),
+    })),
+    months: months.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      year: m.year,
+      month: m.month,
+      startWith: Number(m.startWith),
+      createdAt: m.createdAt.toISOString(),
+      updatedAt: m.updatedAt.toISOString(),
+    })),
+    entries: entries.map((e) => ({
+      id: e.id,
+      monthId: e.monthId,
+      seriesId: e.seriesId,
+      name: e.name,
+      amount: Number(e.amount),
+      type: e.type,
+      categoryId: e.categoryId,
+      accountId: e.accountId,
+      notes: e.notes,
+      sortOrder: e.sortOrder,
+      createdAt: e.createdAt.toISOString(),
+      updatedAt: e.updatedAt.toISOString(),
+    })),
+    christmasSettings: christmasSettings.map((c) => ({
+      id: c.id,
+      userId: c.userId,
+      budget: Number(c.budget),
+    })),
+    christmasEntries: christmasEntries.map((c) => ({
+      id: c.id,
+      userId: c.userId,
+      recipient: c.recipient,
+      item: c.item,
+      amount: Number(c.amount),
+      purchased: c.purchased,
+      notes: c.notes,
+      sortOrder: c.sortOrder,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
+    })),
+    debts: debts.map((d) => ({
+      id: d.id,
+      userId: d.userId,
+      direction: d.direction,
+      name: d.name,
+      category: d.category,
+      amount: Number(d.amount),
+      monthlyPayment: d.monthlyPayment === null ? null : Number(d.monthlyPayment),
+      endDate: d.endDate ? d.endDate.toISOString() : null,
+      settled: d.settled,
+      notes: d.notes,
+      sortOrder: d.sortOrder,
+      createdAt: d.createdAt.toISOString(),
+      updatedAt: d.updatedAt.toISOString(),
+    })),
+  };
+}
+
+export interface RestoreState {
+  error?: string;
+}
+
+export async function restoreBackup(
+  _prevState: RestoreState | undefined,
+  formData: FormData
+): Promise<RestoreState> {
+  // Restoring is how you recover from having lost the whole database, so it
+  // has to be reachable with nobody logged in yet — same trust boundary as
+  // "the first account created becomes admin": whoever reaches the empty
+  // instance first is treated as its owner. Once any account exists, only
+  // an admin can overwrite everything.
+  const userCount = await prisma.user.count();
+  if (userCount > 0) {
+    await requireAdmin();
+  }
+
+  if (formData.get("confirm") !== "on") {
+    return { error: "Please confirm you understand this replaces all existing data." };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose a backup file to restore." };
+  }
+
+  let data: unknown;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    return { error: "That file isn't valid JSON." };
+  }
+
+  if (!isValidBackup(data)) {
+    return { error: "That doesn't look like a Budgie backup file." };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.user.deleteMany();
+
+      await tx.user.createMany({
+        data: data.users.map((u) => ({ ...u, createdAt: new Date(u.createdAt) })),
+      });
+      await tx.category.createMany({
+        data: data.categories.map((c) => ({ ...c, createdAt: new Date(c.createdAt) })),
+      });
+      await tx.account.createMany({
+        data: data.accounts.map((a) => ({ ...a, createdAt: new Date(a.createdAt) })),
+      });
+      await tx.month.createMany({
+        data: data.months.map((m) => ({
+          ...m,
+          createdAt: new Date(m.createdAt),
+          updatedAt: new Date(m.updatedAt),
+        })),
+      });
+      await tx.entry.createMany({
+        data: data.entries.map((e) => ({
+          ...e,
+          createdAt: new Date(e.createdAt),
+          updatedAt: new Date(e.updatedAt),
+        })),
+      });
+      await tx.christmasSettings.createMany({ data: data.christmasSettings });
+      await tx.christmasEntry.createMany({
+        data: data.christmasEntries.map((c) => ({
+          ...c,
+          createdAt: new Date(c.createdAt),
+          updatedAt: new Date(c.updatedAt),
+        })),
+      });
+      await tx.debt.createMany({
+        data: data.debts.map((d) => ({
+          ...d,
+          endDate: d.endDate ? new Date(d.endDate) : null,
+          createdAt: new Date(d.createdAt),
+          updatedAt: new Date(d.updatedAt),
+        })),
+      });
+    });
+  } catch (e) {
+    return { error: `Restore failed: ${e instanceof Error ? e.message : "unknown error"}` };
+  }
+
+  // The restored data may not include the admin who triggered this, or may
+  // have changed their password — sign out everyone and require a fresh
+  // login rather than assume the current session is still valid.
+  await deleteSession();
+  redirect("/login");
 }
 
 export { addMonths };
