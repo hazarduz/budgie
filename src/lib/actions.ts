@@ -16,7 +16,7 @@ export async function getMonth(year: number, month: number) {
     where: { userId_year_month: { userId, year, month } },
     include: {
       entries: {
-        include: { category: true },
+        include: { category: true, account: true },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       },
     },
@@ -75,7 +75,7 @@ export async function createMonth(
           amount: e.amount,
           type: e.type,
           categoryId: e.categoryId,
-          account: e.account,
+          accountId: e.accountId,
           sortOrder: e.sortOrder,
         }));
     }
@@ -151,7 +151,7 @@ export async function createEntry(input: {
   amount: number;
   type: EntryType;
   categoryId?: string | null;
-  account?: string | null;
+  accountId?: string | null;
   notes?: string | null;
 }) {
   const { userId } = await verifySession();
@@ -163,6 +163,10 @@ export async function createEntry(input: {
     const category = await prisma.category.findFirst({ where: { id: input.categoryId, userId } });
     if (!category) throw new Error("Category not found.");
   }
+  if (input.accountId) {
+    const account = await prisma.account.findFirst({ where: { id: input.accountId, userId } });
+    if (!account) throw new Error("Account not found.");
+  }
 
   await prisma.entry.create({
     data: {
@@ -171,7 +175,7 @@ export async function createEntry(input: {
       amount: input.amount,
       type: input.type,
       categoryId: input.categoryId || null,
-      account: input.account || null,
+      accountId: input.accountId || null,
       notes: input.notes || null,
     },
   });
@@ -187,7 +191,7 @@ export async function updateEntry(
     amount: number;
     type: EntryType;
     categoryId?: string | null;
-    account?: string | null;
+    accountId?: string | null;
     notes?: string | null;
   }
 ) {
@@ -199,6 +203,10 @@ export async function updateEntry(
     const category = await prisma.category.findFirst({ where: { id: input.categoryId, userId } });
     if (!category) throw new Error("Category not found.");
   }
+  if (input.accountId) {
+    const account = await prisma.account.findFirst({ where: { id: input.accountId, userId } });
+    if (!account) throw new Error("Account not found.");
+  }
 
   await prisma.entry.update({
     where: { id: entryId },
@@ -207,7 +215,7 @@ export async function updateEntry(
       amount: input.amount,
       type: input.type,
       categoryId: input.categoryId || null,
-      account: input.account || null,
+      accountId: input.accountId || null,
       notes: input.notes || null,
     },
   });
@@ -252,6 +260,37 @@ export async function deleteCategory(id: string) {
   const { userId } = await verifySession();
   await prisma.category.deleteMany({ where: { id, userId } });
   revalidatePath("/settings/categories");
+  revalidatePath("/");
+}
+
+// ---------- Accounts ----------
+
+export async function listAccounts() {
+  const { userId } = await verifySession();
+  return prisma.account.findMany({ where: { userId }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+}
+
+export async function createAccount(name: string, color: string) {
+  const { userId } = await verifySession();
+  await prisma.account.create({ data: { userId, name, color } });
+  revalidatePath("/settings/accounts");
+  revalidatePath("/history");
+  revalidatePath("/");
+}
+
+export async function updateAccount(id: string, name: string, color: string) {
+  const { userId } = await verifySession();
+  await prisma.account.update({ where: { id, userId }, data: { name, color } });
+  revalidatePath("/settings/accounts");
+  revalidatePath("/history");
+  revalidatePath("/");
+}
+
+export async function deleteAccount(id: string) {
+  const { userId } = await verifySession();
+  await prisma.account.deleteMany({ where: { id, userId } });
+  revalidatePath("/settings/accounts");
+  revalidatePath("/history");
   revalidatePath("/");
 }
 
@@ -449,7 +488,7 @@ export async function createUserAccount(input: {
   });
   await provisionUserDefaults(prisma, user.id);
 
-  revalidatePath("/admin/users");
+  revalidatePath("/settings/users");
   return { ok: true };
 }
 
@@ -462,7 +501,7 @@ export async function resetUserPassword(userId: string, newPassword: string): Pr
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-  revalidatePath("/admin/users");
+  revalidatePath("/settings/users");
   return { ok: true };
 }
 
@@ -484,7 +523,7 @@ export async function updateUserRole(userId: string, role: Role): Promise<UserAc
   }
 
   await prisma.user.update({ where: { id: userId }, data: { role } });
-  revalidatePath("/admin/users");
+  revalidatePath("/settings/users");
   return { ok: true };
 }
 
@@ -504,7 +543,7 @@ export async function deleteUserAccount(userId: string): Promise<UserActionResul
   }
 
   await prisma.user.delete({ where: { id: userId } });
-  revalidatePath("/admin/users");
+  revalidatePath("/settings/users");
   return { ok: true };
 }
 

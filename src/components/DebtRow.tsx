@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { toggleDebtSettled } from "@/lib/actions";
 import { formatGBP } from "@/lib/format";
 import { DebtFormModal } from "@/components/DebtFormModal";
+import { EntryIcon } from "@/components/EntryIcon";
 import type { PlainDebt } from "@/lib/serialize";
 
 function isEndingThisYear(endDate: string | null) {
@@ -33,33 +34,36 @@ export function DebtRow({ debt }: { debt: PlainDebt }) {
         debt={debt}
         trigger={
           <div className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-teal-50/70 dark:hover:bg-white/5">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={clsx(
-                    "truncate font-medium",
-                    debt.settled && "text-slate-400 line-through"
+            <div className="flex min-w-0 items-center gap-2.5">
+              <EntryIcon name={debt.name} />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={clsx(
+                      "truncate font-medium",
+                      debt.settled && "text-slate-400 line-through"
+                    )}
+                  >
+                    {debt.name}
+                  </span>
+                  {debt.category && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-white/10 dark:text-slate-300">
+                      {debt.category}
+                    </span>
                   )}
-                >
-                  {debt.name}
-                </span>
-                {debt.category && (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-white/10 dark:text-slate-300">
-                    {debt.category}
-                  </span>
-                )}
-                {!debt.settled && isEndingThisYear(debt.endDate) && (
-                  <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                    This year!
-                  </span>
-                )}
-              </div>
-              <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-slate-500 dark:text-slate-400">
-                {debt.monthlyPayment !== null && <span>{formatGBP(debt.monthlyPayment)}/mo</span>}
-                {debt.endDate && (
-                  <span>Ends {new Date(debt.endDate).toLocaleDateString("en-GB")}</span>
-                )}
-                {debt.notes && <span className="truncate">{debt.notes}</span>}
+                  {!debt.settled && isEndingThisYear(debt.endDate) && (
+                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                      This year!
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-slate-500 dark:text-slate-400">
+                  {debt.monthlyPayment !== null && <span>{formatGBP(debt.monthlyPayment)}/mo</span>}
+                  {debt.endDate && (
+                    <span>Ends {new Date(debt.endDate).toLocaleDateString("en-GB")}</span>
+                  )}
+                  {debt.notes && <span className="truncate">{debt.notes}</span>}
+                </div>
               </div>
             </div>
             <span

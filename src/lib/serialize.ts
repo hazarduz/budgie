@@ -1,6 +1,12 @@
-import type { Category, ChristmasEntry, Debt, DebtDirection, Entry, EntryType } from "@prisma/client";
+import type { Account, Category, ChristmasEntry, Debt, DebtDirection, Entry, EntryType } from "@prisma/client";
 
 export interface PlainCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface PlainAccount {
   id: string;
   name: string;
   color: string;
@@ -14,7 +20,8 @@ export interface PlainEntry {
   type: EntryType;
   categoryId: string | null;
   category: PlainCategory | null;
-  account: string | null;
+  accountId: string | null;
+  account: PlainAccount | null;
   notes: string | null;
 }
 
@@ -27,7 +34,9 @@ export interface PlainChristmasEntry {
   notes: string | null;
 }
 
-export function serializeEntry(entry: Entry & { category: Category | null }): PlainEntry {
+export function serializeEntry(
+  entry: Entry & { category: Category | null; account: Account | null }
+): PlainEntry {
   return {
     id: entry.id,
     monthId: entry.monthId,
@@ -38,13 +47,20 @@ export function serializeEntry(entry: Entry & { category: Category | null }): Pl
     category: entry.category
       ? { id: entry.category.id, name: entry.category.name, color: entry.category.color }
       : null,
-    account: entry.account,
+    accountId: entry.accountId,
+    account: entry.account
+      ? { id: entry.account.id, name: entry.account.name, color: entry.account.color }
+      : null,
     notes: entry.notes,
   };
 }
 
 export function serializeCategory(category: Category): PlainCategory {
   return { id: category.id, name: category.name, color: category.color };
+}
+
+export function serializeAccount(account: Account): PlainAccount {
+  return { id: account.id, name: account.name, color: account.color };
 }
 
 export function serializeChristmasEntry(entry: ChristmasEntry): PlainChristmasEntry {

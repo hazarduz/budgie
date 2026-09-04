@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import clsx from "clsx";
-import { getMonth, findPreviousMonthWithEntries, listCategories } from "@/lib/actions";
+import { getMonth, findPreviousMonthWithEntries, listCategories, listAccounts } from "@/lib/actions";
 import { parseMonthSlug } from "@/lib/months";
-import { serializeCategory, serializeEntry } from "@/lib/serialize";
+import { serializeAccount, serializeCategory, serializeEntry } from "@/lib/serialize";
 import { EntryType } from "@prisma/client";
 import { MonthNav } from "@/components/MonthNav";
 import { CreateMonthPrompt } from "@/components/CreateMonthPrompt";
@@ -21,8 +21,13 @@ export default async function MonthPage({
   const key = parseMonthSlug(slug);
   if (!key) notFound();
 
-  const [month, categoriesRaw] = await Promise.all([getMonth(key.year, key.month), listCategories()]);
+  const [month, categoriesRaw, accountsRaw] = await Promise.all([
+    getMonth(key.year, key.month),
+    listCategories(),
+    listAccounts(),
+  ]);
   const categories = categoriesRaw.map(serializeCategory);
+  const accounts = accountsRaw.map(serializeAccount);
 
   if (!month) {
     const previous = await findPreviousMonthWithEntries(key);
@@ -45,7 +50,9 @@ export default async function MonthPage({
 
   const accountTotals = new Map<string, number>();
   for (const e of entries) {
-    if (e.account) accountTotals.set(e.account, (accountTotals.get(e.account) ?? 0) + e.amount);
+    if (e.account) {
+      accountTotals.set(e.account.name, (accountTotals.get(e.account.name) ?? 0) + e.amount);
+    }
   }
 
   return (
@@ -72,6 +79,7 @@ export default async function MonthPage({
               <EntryFormModal
                 monthId={month.id}
                 categories={categories}
+                accounts={accounts}
                 defaultType={EntryType.DEBIT}
                 trigger={
                   <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
@@ -85,7 +93,7 @@ export default async function MonthPage({
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {debits.map((entry) => (
-                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} />
+                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} />
                 ))}
               </div>
             )}
@@ -101,6 +109,7 @@ export default async function MonthPage({
               <EntryFormModal
                 monthId={month.id}
                 categories={categories}
+                accounts={accounts}
                 defaultType={EntryType.PLANNED}
                 trigger={
                   <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
@@ -114,7 +123,7 @@ export default async function MonthPage({
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {planned.map((entry) => (
-                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} />
+                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} />
                 ))}
               </div>
             )}
