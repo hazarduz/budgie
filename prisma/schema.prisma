@@ -15,18 +15,41 @@ enum EntryType {
   PLANNED
 }
 
+enum Role {
+  ADMIN
+  STANDARD
+}
+
+model User {
+  id                String             @id @default(cuid())
+  username          String             @unique
+  passwordHash      String
+  role              Role               @default(STANDARD)
+  createdAt         DateTime           @default(now())
+  months            Month[]
+  categories        Category[]
+  christmasEntries  ChristmasEntry[]
+  christmasSettings ChristmasSettings?
+}
+
 model Category {
   id        String   @id @default(cuid())
-  name      String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  name      String
   color     String   @default("#0d9488")
   isDefault Boolean  @default(false)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   entries   Entry[]
+
+  @@unique([userId, name])
 }
 
 model Month {
   id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   year      Int
   month     Int
   startWith Decimal  @db.Decimal(10, 2) @default(0)
@@ -34,8 +57,8 @@ model Month {
   updatedAt DateTime @updatedAt
   entries   Entry[]
 
-  @@unique([year, month])
-  @@index([year, month])
+  @@unique([userId, year, month])
+  @@index([userId, year, month])
 }
 
 model Entry {
@@ -57,12 +80,16 @@ model Entry {
 }
 
 model ChristmasSettings {
-  id     Int     @id @default(1)
+  id     String  @id @default(cuid())
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String  @unique
   budget Decimal @db.Decimal(10, 2) @default(250)
 }
 
 model ChristmasEntry {
   id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   recipient String
   item      String
   amount    Decimal  @db.Decimal(10, 2)
@@ -72,5 +99,5 @@ model ChristmasEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([recipient])
+  @@index([userId])
 }

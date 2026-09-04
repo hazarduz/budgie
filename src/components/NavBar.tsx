@@ -2,8 +2,11 @@ import Link from "next/link";
 import { BudgieLogo } from "@/components/BudgieLogo";
 import { currentMonthKey, monthSlug } from "@/lib/months";
 import { NavLinks } from "@/components/NavLinks";
+import { getOptionalSession } from "@/lib/dal";
+import { LogoutButton } from "@/components/LogoutButton";
 
-export function NavBar() {
+export async function NavBar() {
+  const session = await getOptionalSession();
   const currentSlug = monthSlug(currentMonthKey());
 
   const links = [
@@ -12,6 +15,9 @@ export function NavBar() {
     { href: "/christmas", label: "Christmas" },
     { href: "/settings/categories", label: "Categories" },
   ];
+  if (session?.role === "ADMIN") {
+    links.push({ href: "/admin/users", label: "Users" });
+  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur">
@@ -22,7 +28,15 @@ export function NavBar() {
             Budgie
           </span>
         </Link>
-        <NavLinks links={links} />
+        {session && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <NavLinks links={links} />
+            <div className="flex items-center gap-2 border-l border-[var(--border)] pl-4 text-sm">
+              <span className="text-slate-500">{session.username}</span>
+              <LogoutButton />
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );

@@ -1,15 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { addMonths, type MonthKey } from "@/lib/months";
-import { EntryType, type Prisma } from "@prisma/client";
+import { verifySession, requireAdmin } from "@/lib/dal";
+import { provisionUserDefaults } from "@/lib/provision-user";
+import { EntryType, Role, type Prisma } from "@prisma/client";
 
 // ---------- Months ----------
 
 export async function getMonth(year: number, month: number) {
+  const { userId } = await verifySession();
   return prisma.month.findUnique({
-    where: { year_month: { year, month } },
+    where: { userId_year_month: { userId, year, month } },
     include: {
       entries: {
         include: { category: true },
@@ -20,8 +24,10 @@ export async function getMonth(year: number, month: number) {
 }
 
 export async function findPreviousMonthWithEntries(key: MonthKey) {
+  const { userId } = await verifySession();
   const months = await prisma.month.findMany({
     where: {
+      userId,
       OR: buildBeforeClauses(key),
     },
     orderBy: [{ year: "desc" }, { month: "desc" }],
@@ -48,8 +54,10 @@ export async function createMonth(
   month: number,
   options: { copyFromPrevious: boolean }
 ) {
+  const { userId } = await verifySession();
+
   const existing = await prisma.month.findUnique({
-    where: { year_month: { year, month } },
+    where: { userId_year_month: { userId, year, month } },
   });
   if (existing) {
     return { id: existing.id, year: existing.year, month: existing.month };
@@ -75,6 +83,7 @@ export async function createMonth(
 
   const created = await prisma.month.create({
     data: {
+      userId,
       year,
       month,
       startWith: 0,
@@ -88,14 +97,20 @@ export async function createMonth(
 }
 
 export async function updateMonthStartWith(monthId: string, startWith: number) {
-  const updated = await prisma.month.update({ where: { id: monthId }, data: { startWith } });
+  const { userId } = await verifySession();
+  const updated = await prisma.month.update({
+    where: { id: monthId, userId },
+    data: { startWith },
+  });
   revalidatePath("/history");
   revalidatePath("/");
   revalidatePath(monthPath(updated.year, updated.month));
 }
 
 export async function listMonthSummaries() {
+  const { userId } = await verifySession();
   const months = await prisma.month.findMany({
+    where: { userId },
     orderBy: [{ year: "desc" }, { month: "desc" }],
     include: { entries: true },
   });
@@ -123,6 +138,13 @@ export async function listMonthSummaries() {
 
 // ---------- Entries ----------
 
+async function findOwnedEntry(userId: string, entryId: string) {
+  return prisma.entry.findFirst({
+    where: { id: entryId, month: { userId } },
+    include: { month: { select: { year: true, month: true } } },
+  });
+}
+
 export async function createEntry(input: {
   monthId: string;
   name: string;
@@ -132,7 +154,17 @@ export async function createEntry(input: {
   account?: string | null;
   notes?: string | null;
 }) {
-  const entry = await prisma.entry.create({
+  const { userId } = await verifySession();
+
+  const month = await prisma.month.findFirst({ where: { id: input.monthId, userId } });
+  if (!month) throw new Error("Month not found.");
+
+  if (input.categoryId) {
+    const category = await prisma.category.findFirst({ where: { id: input.categoryId, userId } });
+    if (!category) throw new Error("Category not found.");
+  }
+
+  await prisma.entry.create({
     data: {
       monthId: input.monthId,
       name: input.name,
@@ -142,11 +174,10 @@ export async function createEntry(input: {
       account: input.account || null,
       notes: input.notes || null,
     },
-    include: { month: { select: { year: true, month: true } } },
   });
   revalidatePath("/history");
   revalidatePath("/");
-  revalidatePath(monthPath(entry.month.year, entry.month.month));
+  revalidatePath(monthPath(month.year, month.month));
 }
 
 export async function updateEntry(
@@ -160,7 +191,16 @@ export async function updateEntry(
     notes?: string | null;
   }
 ) {
-  const entry = await prisma.entry.update({
+  const { userId } = await verifySession();
+  const owned = await findOwnedEntry(userId, entryId);
+  if (!owned) throw new Error("Entry not found.");
+
+  if (input.categoryId) {
+    const category = await prisma.category.findFirst({ where: { id: input.categoryId, userId } });
+    if (!category) throw new Error("Category not found.");
+  }
+
+  await prisma.entry.update({
     where: { id: entryId },
     data: {
       name: input.name,
@@ -170,43 +210,47 @@ export async function updateEntry(
       account: input.account || null,
       notes: input.notes || null,
     },
-    include: { month: { select: { year: true, month: true } } },
   });
   revalidatePath("/history");
   revalidatePath("/");
-  revalidatePath(monthPath(entry.month.year, entry.month.month));
+  revalidatePath(monthPath(owned.month.year, owned.month.month));
 }
 
 export async function deleteEntry(entryId: string) {
-  const entry = await prisma.entry.delete({
-    where: { id: entryId },
-    include: { month: { select: { year: true, month: true } } },
-  });
+  const { userId } = await verifySession();
+  const owned = await findOwnedEntry(userId, entryId);
+  if (!owned) throw new Error("Entry not found.");
+
+  await prisma.entry.delete({ where: { id: entryId } });
   revalidatePath("/history");
   revalidatePath("/");
-  revalidatePath(monthPath(entry.month.year, entry.month.month));
+  revalidatePath(monthPath(owned.month.year, owned.month.month));
 }
 
 // ---------- Categories ----------
 
 export async function listCategories() {
-  return prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+  const { userId } = await verifySession();
+  return prisma.category.findMany({ where: { userId }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
 }
 
 export async function createCategory(name: string, color: string) {
-  await prisma.category.create({ data: { name, color } });
+  const { userId } = await verifySession();
+  await prisma.category.create({ data: { userId, name, color } });
   revalidatePath("/settings/categories");
   revalidatePath("/");
 }
 
 export async function updateCategory(id: string, name: string, color: string) {
-  await prisma.category.update({ where: { id }, data: { name, color } });
+  const { userId } = await verifySession();
+  await prisma.category.update({ where: { id, userId }, data: { name, color } });
   revalidatePath("/settings/categories");
   revalidatePath("/");
 }
 
 export async function deleteCategory(id: string) {
-  await prisma.category.delete({ where: { id } });
+  const { userId } = await verifySession();
+  await prisma.category.deleteMany({ where: { id, userId } });
   revalidatePath("/settings/categories");
   revalidatePath("/");
 }
@@ -214,25 +258,29 @@ export async function deleteCategory(id: string) {
 // ---------- Christmas ----------
 
 export async function getChristmasSettings() {
+  const { userId } = await verifySession();
   const settings = await prisma.christmasSettings.upsert({
-    where: { id: 1 },
+    where: { userId },
     update: {},
-    create: { id: 1, budget: 250 },
+    create: { userId, budget: 250 },
   });
   return settings;
 }
 
 export async function updateChristmasBudget(budget: number) {
+  const { userId } = await verifySession();
   await prisma.christmasSettings.upsert({
-    where: { id: 1 },
+    where: { userId },
     update: { budget },
-    create: { id: 1, budget },
+    create: { userId, budget },
   });
   revalidatePath("/christmas");
 }
 
 export async function listChristmasEntries() {
+  const { userId } = await verifySession();
   return prisma.christmasEntry.findMany({
+    where: { userId },
     orderBy: [{ purchased: "asc" }, { createdAt: "desc" }],
   });
 }
@@ -243,8 +291,10 @@ export async function createChristmasEntry(input: {
   amount: number;
   notes?: string | null;
 }) {
+  const { userId } = await verifySession();
   await prisma.christmasEntry.create({
     data: {
+      userId,
       recipient: input.recipient,
       item: input.item,
       amount: input.amount,
@@ -258,8 +308,9 @@ export async function updateChristmasEntry(
   id: string,
   input: { recipient: string; item: string; amount: number; notes?: string | null }
 ) {
-  await prisma.christmasEntry.update({
-    where: { id },
+  const { userId } = await verifySession();
+  await prisma.christmasEntry.updateMany({
+    where: { id, userId },
     data: {
       recipient: input.recipient,
       item: input.item,
@@ -271,13 +322,115 @@ export async function updateChristmasEntry(
 }
 
 export async function toggleChristmasPurchased(id: string, purchased: boolean) {
-  await prisma.christmasEntry.update({ where: { id }, data: { purchased } });
+  const { userId } = await verifySession();
+  await prisma.christmasEntry.updateMany({ where: { id, userId }, data: { purchased } });
   revalidatePath("/christmas");
 }
 
 export async function deleteChristmasEntry(id: string) {
-  await prisma.christmasEntry.delete({ where: { id } });
+  const { userId } = await verifySession();
+  await prisma.christmasEntry.deleteMany({ where: { id, userId } });
   revalidatePath("/christmas");
+}
+
+// ---------- Users (admin only) ----------
+
+export interface UserActionResult {
+  ok: boolean;
+  error?: string;
+}
+
+export async function listUsers() {
+  await requireAdmin();
+  return prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+    select: { id: true, username: true, role: true, createdAt: true },
+  });
+}
+
+export async function createUserAccount(input: {
+  username: string;
+  password: string;
+  role: Role;
+}): Promise<UserActionResult> {
+  await requireAdmin();
+
+  const username = input.username.trim();
+  if (!username || !input.password) {
+    return { ok: false, error: "Username and password are required." };
+  }
+  if (input.password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (existing) {
+    return { ok: false, error: "That username is already taken." };
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, 10);
+  const user = await prisma.user.create({
+    data: { username, passwordHash, role: input.role },
+  });
+  await provisionUserDefaults(prisma, user.id);
+
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+export async function resetUserPassword(userId: string, newPassword: string): Promise<UserActionResult> {
+  await requireAdmin();
+
+  if (newPassword.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+export async function updateUserRole(userId: string, role: Role): Promise<UserActionResult> {
+  const session = await requireAdmin();
+
+  if (userId === session.userId && role !== Role.ADMIN) {
+    return { ok: false, error: "You can't remove your own admin access." };
+  }
+
+  if (role !== Role.ADMIN) {
+    const target = await prisma.user.findUnique({ where: { id: userId } });
+    if (target?.role === Role.ADMIN) {
+      const adminCount = await prisma.user.count({ where: { role: Role.ADMIN } });
+      if (adminCount <= 1) {
+        return { ok: false, error: "Cannot remove the last admin account." };
+      }
+    }
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { role } });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+export async function deleteUserAccount(userId: string): Promise<UserActionResult> {
+  const session = await requireAdmin();
+
+  if (userId === session.userId) {
+    return { ok: false, error: "You can't delete your own account." };
+  }
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (target?.role === Role.ADMIN) {
+    const adminCount = await prisma.user.count({ where: { role: Role.ADMIN } });
+    if (adminCount <= 1) {
+      return { ok: false, error: "Cannot delete the last admin account." };
+    }
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+  revalidatePath("/admin/users");
+  return { ok: true };
 }
 
 export { addMonths };
