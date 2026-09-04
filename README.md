@@ -46,7 +46,7 @@ Easiest via Docker Compose (included):
 docker compose up -d
 ```
 
-This starts Postgres on `localhost:5432` with database `budgie`, user
+This starts Postgres on `localhost:3010` with database `budgie`, user
 `budgie`, password `budgie` — matching `.env.example`.
 
 Already have your own PostgreSQL server? Just point `DATABASE_URL` at it
