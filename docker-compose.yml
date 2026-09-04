@@ -24,6 +24,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://budgie:budgie@db:5432/budgie?schema=public
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env — generate one with: openssl rand -base64 32}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-hazarduz}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env to bootstrap the admin account}
     ports:
       - "3010:3000"
 
