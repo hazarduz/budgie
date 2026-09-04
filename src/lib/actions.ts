@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { addMonths, type MonthKey } from "@/lib/months";
@@ -45,6 +46,14 @@ function buildBeforeClauses(key: MonthKey) {
   ];
 }
 
+function buildOnOrAfterClauses(key: MonthKey) {
+  // `key`'s month, or any month after it.
+  return [
+    { year: { gt: key.year } },
+    { year: key.year, month: { gte: key.month } },
+  ];
+}
+
 function monthPath(year: number, month: number) {
   return `/months/${year}-${String(month).padStart(2, "0")}`;
 }
@@ -71,6 +80,7 @@ export async function createMonth(
       entriesToCopy = source.entries
         .filter((e) => e.type === EntryType.DEBIT)
         .map((e) => ({
+          seriesId: e.seriesId,
           name: e.name,
           amount: e.amount,
           type: e.type,
@@ -169,8 +179,11 @@ export async function createEntry(input: {
     if (!account) throw new Error("Account not found.");
   }
 
+  const id = randomUUID();
   await prisma.entry.create({
     data: {
+      id,
+      seriesId: id,
       monthId: input.monthId,
       name: input.name,
       amount: input.amount,
@@ -194,7 +207,8 @@ export async function updateEntry(
     categoryId?: string | null;
     accountId?: string | null;
     notes?: string | null;
-  }
+  },
+  applyToFuture = false
 ) {
   const { userId } = await verifySession();
   const owned = await findOwnedEntry(userId, entryId);
@@ -209,20 +223,46 @@ export async function updateEntry(
     if (!account) throw new Error("Account not found.");
   }
 
-  await prisma.entry.update({
-    where: { id: entryId },
-    data: {
-      name: input.name,
-      amount: input.amount,
-      type: input.type,
-      categoryId: input.categoryId || null,
-      accountId: input.accountId || null,
-      notes: input.notes || null,
-    },
-  });
+  const data = {
+    name: input.name,
+    amount: input.amount,
+    type: input.type,
+    categoryId: input.categoryId || null,
+    accountId: input.accountId || null,
+    notes: input.notes || null,
+  };
+
+  await prisma.entry.update({ where: { id: entryId }, data });
+
+  const affectedMonths = new Set([monthPath(owned.month.year, owned.month.month)]);
+
+  if (applyToFuture) {
+    const futureSiblings = await prisma.entry.findMany({
+      where: {
+        seriesId: owned.seriesId,
+        id: { not: entryId },
+        month: {
+          userId,
+          OR: buildOnOrAfterClauses({ year: owned.month.year, month: owned.month.month }),
+        },
+      },
+      select: { id: true, month: { select: { year: true, month: true } } },
+    });
+
+    if (futureSiblings.length > 0) {
+      await prisma.entry.updateMany({
+        where: { id: { in: futureSiblings.map((e) => e.id) } },
+        data,
+      });
+      for (const sibling of futureSiblings) {
+        affectedMonths.add(monthPath(sibling.month.year, sibling.month.month));
+      }
+    }
+  }
+
   revalidatePath("/history");
   revalidatePath("/");
-  revalidatePath(monthPath(owned.month.year, owned.month.month));
+  for (const path of affectedMonths) revalidatePath(path);
 }
 
 export async function deleteEntry(entryId: string) {
@@ -546,6 +586,120 @@ export async function deleteUserAccount(userId: string): Promise<UserActionResul
   await prisma.user.delete({ where: { id: userId } });
   revalidatePath("/settings/users");
   return { ok: true };
+}
+
+// ---------- Dashboard ----------
+
+export interface DashboardFilters {
+  year: number | null; // null = all years
+  month: number | null; // null = every month within scope
+  categoryIds: string[]; // empty = every category
+  accountIds: string[]; // empty = every account
+}
+
+export async function getDashboardFilterOptions() {
+  const { userId } = await verifySession();
+  const [years, categories, accounts] = await Promise.all([
+    prisma.month.findMany({
+      where: { userId },
+      select: { year: true },
+      distinct: ["year"],
+      orderBy: { year: "desc" },
+    }),
+    prisma.category.findMany({ where: { userId }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    prisma.account.findMany({ where: { userId }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+  ]);
+  return {
+    years: years.map((y) => y.year),
+    categories,
+    accounts,
+  };
+}
+
+export async function getDashboardData(filters: DashboardFilters) {
+  const { userId } = await verifySession();
+
+  const monthWhere: Prisma.MonthWhereInput = { userId };
+  if (filters.year !== null) monthWhere.year = filters.year;
+  if (filters.month !== null) monthWhere.month = filters.month;
+
+  const entryWhere: Prisma.EntryWhereInput = {};
+  if (filters.categoryIds.length > 0) entryWhere.categoryId = { in: filters.categoryIds };
+  if (filters.accountIds.length > 0) entryWhere.accountId = { in: filters.accountIds };
+
+  const months = await prisma.month.findMany({
+    where: monthWhere,
+    orderBy: [{ year: "asc" }, { month: "asc" }],
+    include: {
+      entries: {
+        where: entryWhere,
+        include: { category: true, account: true },
+      },
+    },
+  });
+
+  const trend = months.map((m) => {
+    const outgoings = m.entries.reduce((sum, e) => sum + Number(e.amount), 0);
+    const startWith = Number(m.startWith);
+    return {
+      year: m.year,
+      month: m.month,
+      startWith,
+      outgoings,
+      remaining: startWith - outgoings,
+    };
+  });
+
+  const categoryTotals = new Map<string, { name: string; color: string; total: number }>();
+  const accountTotals = new Map<string, { name: string; color: string; total: number }>();
+  let uncategorizedTotal = 0;
+  let untaggedTotal = 0;
+
+  for (const m of months) {
+    for (const e of m.entries) {
+      const amount = Number(e.amount);
+      if (e.category) {
+        const existing = categoryTotals.get(e.category.id) ?? {
+          name: e.category.name,
+          color: e.category.color,
+          total: 0,
+        };
+        existing.total += amount;
+        categoryTotals.set(e.category.id, existing);
+      } else {
+        uncategorizedTotal += amount;
+      }
+      if (e.account) {
+        const existing = accountTotals.get(e.account.id) ?? {
+          name: e.account.name,
+          color: e.account.color,
+          total: 0,
+        };
+        existing.total += amount;
+        accountTotals.set(e.account.id, existing);
+      } else {
+        untaggedTotal += amount;
+      }
+    }
+  }
+
+  const totalOutgoings = trend.reduce((sum, t) => sum + t.outgoings, 0);
+  const totalIncomings = trend.reduce((sum, t) => sum + t.startWith, 0);
+
+  return {
+    trend,
+    categoryBreakdown: [...categoryTotals.values()].sort((a, b) => b.total - a.total),
+    accountBreakdown: [...accountTotals.values()].sort((a, b) => b.total - a.total),
+    uncategorizedTotal,
+    untaggedTotal,
+    totals: {
+      outgoings: totalOutgoings,
+      incomings: totalIncomings,
+      net: totalIncomings - totalOutgoings,
+      avgMonthlySpend: trend.length > 0 ? totalOutgoings / trend.length : 0,
+      monthCount: trend.length,
+    },
+  };
 }
 
 export { addMonths };

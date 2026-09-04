@@ -85,6 +85,11 @@ model Entry {
   id         String    @id @default(cuid())
   month      Month     @relation(fields: [monthId], references: [id], onDelete: Cascade)
   monthId    String
+  // Shared across the copy-forward lineage of "the same" recurring debit, so an
+  // edit can be applied to this month only or to this-and-future months. A
+  // freshly created entry starts as its own series (seriesId == id); copying
+  // it forward carries the seriesId along.
+  seriesId   String
   name       String
   amount     Decimal   @db.Decimal(10, 2)
   type       EntryType @default(DEBIT)
@@ -98,6 +103,7 @@ model Entry {
   updatedAt  DateTime  @updatedAt
 
   @@index([monthId])
+  @@index([seriesId])
 }
 
 model ChristmasSettings {

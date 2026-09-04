@@ -34,7 +34,16 @@ git, so it never has to touch GitHub.
   for things like "Capital One" or "Netflix" where possible, and a
   sensible fallback otherwise. No configuration needed.
 - **Copy-forward** — starting a new month can copy last month's monthly
-  debits across so you're not retyping Rent, Council Tax, etc. every time.
+  debits (amount, category, account, and notes) across so you're not
+  retyping Rent, Council Tax, etc. every time.
+- **Edit this month or every future one** — if a copied-forward debit's
+  price changes (a phone contract going up, say), editing it offers
+  "Save this month" or "Save + future months". The latter updates every
+  later month that debit was copied into, but never touches past months
+  — so old months stay accurate for the dashboard's trends.
+- **Dashboard** — trends across your months: a line chart of Start With /
+  Outgoings / Remaining over time, and bar charts of spend by category
+  and by account, all filterable by year, month, category, and account.
 - **Christmas** — a standalone tracker for gifts bought throughout the
   year, with an editable budget (defaults to £250) and running "spent" /
   "remaining" totals.
