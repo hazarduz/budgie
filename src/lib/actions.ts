@@ -5,9 +5,9 @@ import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { addMonths, type MonthKey } from "@/lib/months";
-import { verifySession, requireAdmin } from "@/lib/dal";
+import { verifySession, requireAdmin, getOptionalSession } from "@/lib/dal";
 import { provisionUserDefaults } from "@/lib/provision-user";
-import { EntryType, Role, DebtDirection, type Prisma } from "@prisma/client";
+import { EntryType, Role, DebtDirection, Theme, type Prisma } from "@prisma/client";
 
 // ---------- Months ----------
 
@@ -716,6 +716,21 @@ export async function updateShowEntryIcons(value: boolean) {
   revalidatePath("/settings/preferences");
   revalidatePath("/");
   revalidatePath("/history");
+}
+
+export type ThemePreference = "system" | "light" | "dark";
+
+export async function getTheme(): Promise<ThemePreference> {
+  const session = await getOptionalSession();
+  if (!session?.userId) return "system";
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { theme: true } });
+  return (user?.theme ?? Theme.SYSTEM).toLowerCase() as ThemePreference;
+}
+
+export async function updateTheme(value: ThemePreference) {
+  const { userId } = await verifySession();
+  await prisma.user.update({ where: { id: userId }, data: { theme: value.toUpperCase() as Theme } });
+  revalidatePath("/", "layout");
 }
 
 export { addMonths };

@@ -25,12 +25,19 @@ enum DebtDirection {
   OWED_TO_ME
 }
 
+enum Theme {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
 model User {
   id                String             @id @default(cuid())
   username          String             @unique
   passwordHash      String
   role              Role               @default(STANDARD)
   showEntryIcons    Boolean            @default(true)
+  theme             Theme              @default(SYSTEM)
   createdAt         DateTime           @default(now())
   months            Month[]
   categories        Category[]
