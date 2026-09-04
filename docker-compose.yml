@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: budgie
       POSTGRES_DB: budgie
     ports:
-      - "5432:5432"
+      - "3010:5432"
     volumes:
       - budgie-db:/var/lib/postgresql/data
 
