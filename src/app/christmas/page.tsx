@@ -5,6 +5,8 @@ import { ChristmasEntryFormModal } from "@/components/ChristmasEntryFormModal";
 import { ChristmasEntryRow } from "@/components/ChristmasEntryRow";
 import { StatBar } from "@/components/StatBar";
 
+export const dynamic = "force-dynamic";
+
 export default async function ChristmasPage() {
   const [settings, entriesRaw] = await Promise.all([
     getChristmasSettings(),

@@ -5,6 +5,8 @@ import { formatGBP } from "@/lib/format";
 import Link from "next/link";
 import clsx from "clsx";
 
+export const dynamic = "force-dynamic";
+
 export default async function HistoryPage() {
   const summaries = await listMonthSummaries();
   const data: MonthSummaryData[] = summaries.map((s) => ({

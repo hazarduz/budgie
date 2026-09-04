@@ -38,38 +38,46 @@ git, so it never has to touch GitHub.
 
 ## Getting started
 
-### 1. Start a PostgreSQL database
+There are two ways to run Budgie: the whole thing via Docker Compose
+(app + database, one command), or the app locally with `npm run dev`
+against a database of your choice.
 
-Easiest via Docker Compose (included):
+### Option A: Docker Compose (app + database)
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-This starts Postgres on `localhost:3010` with database `budgie`, user
-`budgie`, password `budgie` — matching `.env.example`.
+This builds and starts two containers:
 
-Already have your own PostgreSQL server? Just point `DATABASE_URL` at it
-instead (see below).
+- `budgie-db-1` — Postgres, exposed on `localhost:5343`
+- `budgie-app-1` — the Next.js app, exposed on `localhost:3010`
 
-### 2. Configure the app
+The app container runs migrations and seeds default categories
+automatically on startup. Open
+[http://localhost:3010](http://localhost:3010).
+
+### Option B: Local dev server
+
+Start just the database via Docker Compose:
+
+```bash
+docker compose up -d db
+```
+
+This starts Postgres on `localhost:5343` with database `budgie`, user
+`budgie`, password `budgie` — matching `.env.example`. Already have your
+own PostgreSQL server? Just point `DATABASE_URL` at it instead.
+
+Then configure and run the app:
 
 ```bash
 cp .env.example .env
 # edit .env if your database isn't the docker-compose default
-```
 
-### 3. Install dependencies and set up the database schema
-
-```bash
 npm install
 npm run db:migrate   # creates tables
 npm run db:seed      # seeds default categories + Christmas budget
-```
-
-### 4. Run it
-
-```bash
 npm run dev
 ```
 
@@ -89,9 +97,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deploying
 
-Build the app (`npm run build`) and run it (`npm run start`) on any server
-or VM with Node.js and network access to your PostgreSQL database — a
-small VPS, a home server, or a container platform all work. Since this is
-a single-user personal app, no authentication is included; put it behind
-your own network/VPN or a reverse proxy with basic auth if you expose it
-beyond your local network.
+`docker compose up -d --build` (Option A above) is the easiest way to run
+Budgie on a home server or small VPS — it builds the app image and starts
+both containers. Prefer to run it without Docker? Build the app
+(`npm run build`) and run it (`npm run start`) on any machine with
+Node.js and network access to your PostgreSQL database instead.
+
+Since this is a single-user personal app, no authentication is included;
+put it behind your own network/VPN or a reverse proxy with basic auth if
+you expose it beyond your local network.

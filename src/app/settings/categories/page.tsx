@@ -2,6 +2,8 @@ import { listCategories } from "@/lib/actions";
 import { serializeCategory } from "@/lib/serialize";
 import { CategoryManager } from "@/components/CategoryManager";
 
+export const dynamic = "force-dynamic";
+
 export default async function CategoriesPage() {
   const categories = (await listCategories()).map(serializeCategory);
 
