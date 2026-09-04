@@ -31,7 +31,9 @@ export async function NavBar() {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <NavLinks links={links} />
             <div className="flex items-center gap-2 border-l border-[var(--border)] pl-4 text-sm">
-              <span className="text-slate-500">{session.username}</span>
+              <Link href="/profile" className="text-slate-500 hover:text-teal-700 dark:hover:text-teal-300">
+                {session.username}
+              </Link>
               <LogoutButton />
             </div>
           </div>

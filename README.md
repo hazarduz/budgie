@@ -74,6 +74,9 @@ git, so it never has to touch GitHub.
   **admin**, who can add, remove, or reset the password of further
   logins from Settings → Users; logins added afterwards are
   **standard** by default.
+- **Profile** — click your username in the top bar to set a profile
+  picture (cropped and resized right in the browser before it's saved)
+  and change your own password.
 - **Backup & restore** — the admin can download a single JSON file with
   everything in Budgie (every user's months, categories, accounts, debts,
   and Christmas lists) from Settings → Backup, and restore it again later
