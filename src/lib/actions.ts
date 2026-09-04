@@ -76,6 +76,7 @@ export async function createMonth(
           type: e.type,
           categoryId: e.categoryId,
           accountId: e.accountId,
+          notes: e.notes,
           sortOrder: e.sortOrder,
         }));
     }
