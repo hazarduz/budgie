@@ -18,7 +18,7 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (pathname.startsWith("/admin") && session?.role !== "ADMIN") {
+  if (pathname.startsWith("/settings/users") && session?.role !== "ADMIN") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 

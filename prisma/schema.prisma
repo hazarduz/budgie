@@ -33,6 +33,7 @@ model User {
   createdAt         DateTime           @default(now())
   months            Month[]
   categories        Category[]
+  accounts          Account[]
   christmasEntries  ChristmasEntry[]
   christmasSettings ChristmasSettings?
   debts             Debt[]
@@ -45,6 +46,19 @@ model Category {
   name      String
   color     String   @default("#0d9488")
   isDefault Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  entries   Entry[]
+
+  @@unique([userId, name])
+}
+
+model Account {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  name      String
+  color     String   @default("#0d9488")
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   entries   Entry[]
@@ -76,7 +90,8 @@ model Entry {
   type       EntryType @default(DEBIT)
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   categoryId String?
-  account    String?
+  account    Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  accountId  String?
   notes      String?
   sortOrder  Int       @default(0)
   createdAt  DateTime  @default(now())

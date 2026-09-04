@@ -4,7 +4,7 @@ import { UserManager } from "@/components/UserManager";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage() {
+export default async function SettingsUsersPage() {
   const session = await requireAdmin();
   const usersRaw = await listUsers();
   const users = usersRaw.map((u) => ({ ...u, createdAt: u.createdAt.toISOString() }));

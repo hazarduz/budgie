@@ -22,8 +22,17 @@ git, so it never has to touch GitHub.
   calendar-style grid, plus a flat table for scanning totals at a glance.
 - **Categories** — editable tags (Bills, Groceries, Luxury, Purchase, …)
   you can add, rename, recolour, or remove from Settings → Categories.
-  Each entry can also carry free-text notes and an optional "account" tag
-  (e.g. a person or card you're paying towards).
+  Each entry can also carry free-text notes.
+- **Accounts** — editable tags (e.g. "Home", "My Bills", "Extra Spends")
+  from Settings → Accounts, for grouping entries by where the money
+  actually needs to go. Tag entries with one to see running totals per
+  account in a sidebar on the monthly page — handy for knowing how much
+  to transfer where.
+- **Icons** — entries and debts automatically get a little icon next to
+  their name based on what they're called — a house for "Rent", a water
+  drop for "Water", a phone for "O2" or "EE", recognisable brand marks
+  for things like "Capital One" or "Netflix" where possible, and a
+  sensible fallback otherwise. No configuration needed.
 - **Copy-forward** — starting a new month can copy last month's monthly
   debits across so you're not retyping Rent, Council Tax, etc. every time.
 - **Christmas** — a standalone tracker for gifts bought throughout the
@@ -33,11 +42,11 @@ git, so it never has to touch GitHub.
   store cards like Argos Pay, …) and things owed to you (money from
   friends or family), each with an optional category, monthly payment,
   and end date, and a checkbox to mark it settled.
-- **Accounts** — everything above is private per person. Log in to see
+- **Logins** — everything above is private per person. Log in to see
   only your own months, categories, and Christmas list; nobody else's data
-  is visible to you. The first account anyone creates becomes an
+  is visible to you. The first login anyone creates becomes an
   **admin**, who can add, remove, or reset the password of further
-  accounts from the Users page; accounts added afterwards are
+  logins from Settings → Users; logins added afterwards are
   **standard** by default.
 
 ## Tech stack
@@ -134,3 +143,11 @@ you do becomes the admin instead.
 Forking this for your own family or household? There's nothing to
 rename — deploy it fresh, and whoever sets it up first just creates their
 own admin account on first run.
+
+One external call worth knowing about: for a handful of recognised
+brand names (banks, phone networks, streaming services), the automatic
+entry icons fetch that brand's favicon from Google's public favicon
+service in the browser — no personal or financial data leaves your
+instance, just the brand's own name. Every other entry gets a plain
+emoji with no network request, and if the favicon fails to load for any
+reason (offline, blocked), it falls back to an emoji automatically.

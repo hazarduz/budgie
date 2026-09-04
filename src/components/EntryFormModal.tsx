@@ -3,17 +3,19 @@
 import { useState, useTransition, type ReactNode } from "react";
 import { EntryType } from "@prisma/client";
 import { createEntry, deleteEntry, updateEntry } from "@/lib/actions";
-import type { PlainCategory, PlainEntry } from "@/lib/serialize";
+import type { PlainAccount, PlainCategory, PlainEntry } from "@/lib/serialize";
 
 export function EntryFormModal({
   monthId,
   categories,
+  accounts,
   defaultType = EntryType.DEBIT,
   entry,
   trigger,
 }: {
   monthId: string;
   categories: PlainCategory[];
+  accounts: PlainAccount[];
   defaultType?: EntryType;
   entry?: PlainEntry;
   trigger: ReactNode;
@@ -27,16 +29,16 @@ export function EntryFormModal({
     const amount = Number(formData.get("amount"));
     const type = formData.get("type") as EntryType;
     const categoryId = String(formData.get("categoryId") ?? "") || null;
-    const account = String(formData.get("account") ?? "").trim() || null;
+    const accountId = String(formData.get("accountId") ?? "") || null;
     const notes = String(formData.get("notes") ?? "").trim() || null;
 
     if (!name || !Number.isFinite(amount)) return;
 
     startTransition(async () => {
       if (isEdit && entry) {
-        await updateEntry(entry.id, { name, amount, type, categoryId, account, notes });
+        await updateEntry(entry.id, { name, amount, type, categoryId, accountId, notes });
       } else {
-        await createEntry({ monthId, name, amount, type, categoryId, account, notes });
+        await createEntry({ monthId, name, amount, type, categoryId, accountId, notes });
       }
       setOpen(false);
     });
@@ -129,14 +131,20 @@ export function EntryFormModal({
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-500">
-                    Account (optional)
+                    Account
                   </label>
-                  <input
-                    name="account"
-                    defaultValue={entry?.account ?? ""}
+                  <select
+                    name="accountId"
+                    defaultValue={entry?.accountId ?? ""}
                     className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
-                    placeholder="e.g. Joint, Gem"
-                  />
+                  >
+                    <option value="">None</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
