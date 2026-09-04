@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# Prisma's query engine needs OpenSSL, which Alpine doesn't ship by default.
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 COPY package.json package-lock.json ./
