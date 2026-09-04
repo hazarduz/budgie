@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import clsx from "clsx";
 import { getMonth, findPreviousMonthWithEntries, listCategories } from "@/lib/actions";
 import { parseMonthSlug } from "@/lib/months";
 import { serializeCategory, serializeEntry } from "@/lib/serialize";
@@ -9,6 +10,7 @@ import { StatBar } from "@/components/StatBar";
 import { StartWithEditor } from "@/components/StartWithEditor";
 import { EntryRow } from "@/components/EntryRow";
 import { EntryFormModal } from "@/components/EntryFormModal";
+import { AccountTotalsSidebar } from "@/components/AccountTotalsSidebar";
 
 export default async function MonthPage({
   params,
@@ -50,82 +52,79 @@ export default async function MonthPage({
     <div className="space-y-6">
       <MonthNav current={key} />
 
-      <div className="flex items-center justify-between rounded-xl bg-blue-600 px-4 py-3 text-white shadow-sm">
-        <span className="font-semibold tracking-wide">Start With</span>
-        <StartWithEditor monthId={month.id} value={startWith} />
-      </div>
-
-      <section className="card p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
-            Monthly Debits
-          </h2>
-          <EntryFormModal
-            monthId={month.id}
-            categories={categories}
-            defaultType={EntryType.DEBIT}
-            trigger={
-              <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
-                + Add debit
-              </span>
-            }
-          />
-        </div>
-        {debits.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-400">No monthly debits yet.</p>
-        ) : (
-          <div className="divide-y divide-[var(--border)]">
-            {debits.map((entry) => (
-              <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} />
-            ))}
-          </div>
+      <div
+        className={clsx(
+          "grid gap-6",
+          accountTotals.size > 0 && "lg:grid-cols-[minmax(0,1fr)_260px]"
         )}
-      </section>
+      >
+        <div className="min-w-0 space-y-6">
+          <div className="flex items-center justify-between rounded-xl bg-blue-600 px-4 py-3 text-white shadow-sm">
+            <span className="font-semibold tracking-wide">Start With</span>
+            <StartWithEditor monthId={month.id} value={startWith} />
+          </div>
 
-      <StatBar label="Total Left After Monthly Debits" amount={leftAfterDebits} color="green" />
-
-      {accountTotals.size > 0 && (
-        <section className="card flex flex-wrap gap-3 p-4 text-sm">
-          {[...accountTotals.entries()].map(([account, total]) => (
-            <div
-              key={account}
-              className="rounded-lg bg-slate-50 px-3 py-1.5 dark:bg-white/5"
-            >
-              <span className="text-slate-500">Total to {account}: </span>
-              <span className="font-semibold">{total.toFixed(2)}</span>
+          <section className="card p-4 sm:p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+                Monthly Debits
+              </h2>
+              <EntryFormModal
+                monthId={month.id}
+                categories={categories}
+                defaultType={EntryType.DEBIT}
+                trigger={
+                  <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
+                    + Add debit
+                  </span>
+                }
+              />
             </div>
-          ))}
-        </section>
-      )}
+            {debits.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">No monthly debits yet.</p>
+            ) : (
+              <div className="divide-y divide-[var(--border)]">
+                {debits.map((entry) => (
+                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} />
+                ))}
+              </div>
+            )}
+          </section>
 
-      <section className="card p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
-            Planned Spend
-          </h2>
-          <EntryFormModal
-            monthId={month.id}
-            categories={categories}
-            defaultType={EntryType.PLANNED}
-            trigger={
-              <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
-                + Add planned spend
-              </span>
-            }
-          />
+          <StatBar label="Total Left After Monthly Debits" amount={leftAfterDebits} color="green" />
+
+          <section className="card p-4 sm:p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+                Planned Spend
+              </h2>
+              <EntryFormModal
+                monthId={month.id}
+                categories={categories}
+                defaultType={EntryType.PLANNED}
+                trigger={
+                  <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
+                    + Add planned spend
+                  </span>
+                }
+              />
+            </div>
+            {planned.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">No planned spend yet.</p>
+            ) : (
+              <div className="divide-y divide-[var(--border)]">
+                {planned.map((entry) => (
+                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <StatBar label="Total Remain After Spends" amount={remainAfterSpends} color="purple" />
         </div>
-        {planned.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-400">No planned spend yet.</p>
-        ) : (
-          <div className="divide-y divide-[var(--border)]">
-            {planned.map((entry) => (
-              <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} />
-            ))}
-          </div>
-        )}
-      </section>
 
-      <StatBar label="Total Remain After Spends" amount={remainAfterSpends} color="purple" />
+        <AccountTotalsSidebar totals={[...accountTotals.entries()]} />
+      </div>
     </div>
   );
 }
