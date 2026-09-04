@@ -11,6 +11,7 @@ export async function NavBar() {
 
   const links = [
     { href: `/months/${currentSlug}`, label: "This Month" },
+    { href: "/dashboard", label: "Dashboard" },
     { href: "/history", label: "History" },
     { href: "/christmas", label: "Christmas" },
     { href: "/debts", label: "Debts" },

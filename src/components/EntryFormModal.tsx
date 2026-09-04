@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { EntryType } from "@prisma/client";
 import { createEntry, deleteEntry, updateEntry } from "@/lib/actions";
 import type { PlainAccount, PlainCategory, PlainEntry } from "@/lib/serialize";
@@ -22,9 +22,12 @@ export function EntryFormModal({
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
   const isEdit = Boolean(entry);
 
-  function handleSubmit(formData: FormData) {
+  function submit(applyToFuture: boolean) {
+    if (!formRef.current) return;
+    const formData = new FormData(formRef.current);
     const name = String(formData.get("name") ?? "").trim();
     const amount = Number(formData.get("amount"));
     const type = formData.get("type") as EntryType;
@@ -36,7 +39,7 @@ export function EntryFormModal({
 
     startTransition(async () => {
       if (isEdit && entry) {
-        await updateEntry(entry.id, { name, amount, type, categoryId, accountId, notes });
+        await updateEntry(entry.id, { name, amount, type, categoryId, accountId, notes }, applyToFuture);
       } else {
         await createEntry({ monthId, name, amount, type, categoryId, accountId, notes });
       }
@@ -71,7 +74,14 @@ export function EntryFormModal({
             <h2 className="mb-4 text-lg font-semibold">
               {isEdit ? "Edit entry" : "Add entry"}
             </h2>
-            <form action={handleSubmit} className="space-y-3">
+            <form
+              ref={formRef}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit(false);
+              }}
+              className="space-y-3"
+            >
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500">Name</label>
                 <input
@@ -172,7 +182,7 @@ export function EntryFormModal({
                     </button>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
@@ -180,13 +190,36 @@ export function EntryFormModal({
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    className="rounded-lg bg-teal-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
-                  >
-                    {isPending ? "Saving…" : isEdit ? "Save" : "Add"}
-                  </button>
+                  {isEdit ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => submit(false)}
+                        disabled={isPending}
+                        title="Only update this month's entry"
+                        className="rounded-lg border border-teal-600 px-3 py-1.5 text-sm font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-50 dark:text-teal-300 dark:hover:bg-teal-900/30"
+                      >
+                        {isPending ? "Saving…" : "Save this month"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => submit(true)}
+                        disabled={isPending}
+                        title="Also update this same debit in every later month, leaving past months untouched"
+                        className="rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                      >
+                        {isPending ? "Saving…" : "Save + future months"}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isPending}
+                      className="rounded-lg bg-teal-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                    >
+                      {isPending ? "Saving…" : "Add"}
+                    </button>
+                  )}
                 </div>
               </div>
             </form>
