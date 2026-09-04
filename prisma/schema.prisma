@@ -1,0 +1,76 @@
+// Budgie — personal budget tracker
+// Prisma schema for a self-hosted PostgreSQL database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EntryType {
+  DEBIT
+  PLANNED
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#0d9488")
+  isDefault Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  entries   Entry[]
+}
+
+model Month {
+  id        String   @id @default(cuid())
+  year      Int
+  month     Int
+  startWith Decimal  @db.Decimal(10, 2) @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  entries   Entry[]
+
+  @@unique([year, month])
+  @@index([year, month])
+}
+
+model Entry {
+  id         String    @id @default(cuid())
+  month      Month     @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  monthId    String
+  name       String
+  amount     Decimal   @db.Decimal(10, 2)
+  type       EntryType @default(DEBIT)
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
+  account    String?
+  notes      String?
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([monthId])
+}
+
+model ChristmasSettings {
+  id     Int     @id @default(1)
+  budget Decimal @db.Decimal(10, 2) @default(250)
+}
+
+model ChristmasEntry {
+  id        String   @id @default(cuid())
+  recipient String
+  item      String
+  amount    Decimal  @db.Decimal(10, 2)
+  purchased Boolean  @default(false)
+  notes     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recipient])
+}

@@ -1,0 +1,52 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f766e" />
+      <stop offset="1" stop-color="#134e4a" />
+    </linearGradient>
+    <linearGradient id="body" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#5eead4" />
+      <stop offset="0.55" stop-color="#14b8a6" />
+      <stop offset="1" stop-color="#0d9488" />
+    </linearGradient>
+    <linearGradient id="tail" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d9488" />
+      <stop offset="1" stop-color="#0f766e" />
+    </linearGradient>
+    <linearGradient id="wing" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2dd4bf" />
+      <stop offset="1" stop-color="#0d9488" />
+    </linearGradient>
+  </defs>
+
+  <rect width="200" height="200" rx="44" fill="url(#bg)" />
+
+  <!-- tail -->
+  <path d="M 118 122 C 150 128 172 140 182 162 C 164 158 146 156 128 150 C 118 146 112 136 118 122 Z" fill="url(#tail)" />
+
+  <!-- body -->
+  <ellipse cx="98" cy="118" rx="46" ry="40" fill="url(#body)" />
+
+  <!-- wing -->
+  <path d="M 84 96 C 108 94 128 108 130 132 C 128 140 118 146 104 144 C 88 142 76 128 78 110 C 79 104 80 99 84 96 Z" fill="url(#wing)" opacity="0.9" />
+  <path d="M 92 108 C 104 108 114 116 116 128" stroke="#134e4a" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.45" />
+  <path d="M 88 120 C 98 121 106 128 108 138" stroke="#134e4a" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.35" />
+
+  <!-- head -->
+  <circle cx="68" cy="80" r="32" fill="url(#body)" />
+
+  <!-- cheek patch -->
+  <circle cx="54" cy="90" r="11" fill="#fbbf24" opacity="0.95" />
+
+  <!-- beak -->
+  <path d="M 40 78 C 32 80 28 85 27 90 C 33 91 40 90 45 86 Z" fill="#f59e0b" />
+
+  <!-- eye -->
+  <circle cx="60" cy="74" r="6.5" fill="#0c2b28" />
+  <circle cx="62.3" cy="71.6" r="2" fill="#f0fdfa" />
+
+  <!-- feet + perch -->
+  <path d="M 88 154 L 86 168" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" />
+  <path d="M 104 156 L 106 168" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" />
+  <rect x="60" y="168" width="80" height="9" rx="4.5" fill="#92400e" />
+</svg>
