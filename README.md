@@ -12,7 +12,7 @@ your own machine or server, and push/pull as you would any other codebase.
 Your budget data itself lives in your own **PostgreSQL** database, not in
 git, so it never has to touch GitHub.
 
-![This Month](docs/screenshots/this-month.png)
+![This Month](docs/screenshots/this-month-new.png)
 
 ## Features
 
