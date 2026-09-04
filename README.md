@@ -32,7 +32,8 @@ git, so it never has to touch GitHub.
   their name based on what they're called — a house for "Rent", a water
   drop for "Water", a phone for "O2" or "EE", recognisable brand marks
   for things like "Capital One" or "Netflix" where possible, and a
-  sensible fallback otherwise. No configuration needed.
+  sensible fallback otherwise. No configuration needed; can be turned
+  off per-account from Settings → Preferences.
 - **Copy-forward** — starting a new month can copy last month's monthly
   debits (amount, category, account, and notes) across so you're not
   retyping Rent, Council Tax, etc. every time.

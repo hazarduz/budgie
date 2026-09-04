@@ -1,6 +1,12 @@
 import { notFound } from "next/navigation";
 import clsx from "clsx";
-import { getMonth, findPreviousMonthWithEntries, listCategories, listAccounts } from "@/lib/actions";
+import {
+  getMonth,
+  findPreviousMonthWithEntries,
+  listCategories,
+  listAccounts,
+  getShowEntryIcons,
+} from "@/lib/actions";
 import { parseMonthSlug } from "@/lib/months";
 import { serializeAccount, serializeCategory, serializeEntry } from "@/lib/serialize";
 import { EntryType } from "@prisma/client";
@@ -21,10 +27,11 @@ export default async function MonthPage({
   const key = parseMonthSlug(slug);
   if (!key) notFound();
 
-  const [month, categoriesRaw, accountsRaw] = await Promise.all([
+  const [month, categoriesRaw, accountsRaw, showEntryIcons] = await Promise.all([
     getMonth(key.year, key.month),
     listCategories(),
     listAccounts(),
+    getShowEntryIcons(),
   ]);
   const categories = categoriesRaw.map(serializeCategory);
   const accounts = accountsRaw.map(serializeAccount);
@@ -93,7 +100,7 @@ export default async function MonthPage({
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {debits.map((entry) => (
-                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} />
+                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} showIcon={showEntryIcons} />
                 ))}
               </div>
             )}
@@ -123,7 +130,7 @@ export default async function MonthPage({
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {planned.map((entry) => (
-                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} />
+                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} showIcon={showEntryIcons} />
                 ))}
               </div>
             )}

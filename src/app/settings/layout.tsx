@@ -7,6 +7,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   const links = [
     { href: "/settings/categories", label: "Categories" },
     { href: "/settings/accounts", label: "Accounts" },
+    { href: "/settings/preferences", label: "Preferences" },
   ];
   if (session.role === "ADMIN") {
     links.push({ href: "/settings/users", label: "Users" });

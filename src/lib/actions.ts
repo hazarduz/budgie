@@ -702,4 +702,20 @@ export async function getDashboardData(filters: DashboardFilters) {
   };
 }
 
+// ---------- Preferences ----------
+
+export async function getShowEntryIcons() {
+  const { userId } = await verifySession();
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { showEntryIcons: true } });
+  return user?.showEntryIcons ?? true;
+}
+
+export async function updateShowEntryIcons(value: boolean) {
+  const { userId } = await verifySession();
+  await prisma.user.update({ where: { id: userId }, data: { showEntryIcons: value } });
+  revalidatePath("/settings/preferences");
+  revalidatePath("/");
+  revalidatePath("/history");
+}
+
 export { addMonths };
