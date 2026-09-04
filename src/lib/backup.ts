@@ -11,6 +11,7 @@ export interface BackupUser {
   role: Role;
   showEntryIcons: boolean;
   theme: Theme;
+  avatar: string | null;
   createdAt: string;
 }
 

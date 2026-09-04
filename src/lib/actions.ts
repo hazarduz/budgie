@@ -736,6 +736,87 @@ export async function updateTheme(value: ThemePreference) {
   revalidatePath("/", "layout");
 }
 
+// ---------- Profile ----------
+
+export async function getProfile() {
+  const { userId } = await verifySession();
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true, role: true, avatar: true },
+  });
+}
+
+const MAX_AVATAR_DATA_URL_LENGTH = 2_000_000; // ~1.5MB decoded; the client resizes well below this
+
+export interface AvatarActionResult {
+  ok: boolean;
+  error?: string;
+}
+
+export async function updateAvatar(dataUrl: string): Promise<AvatarActionResult> {
+  const { userId } = await verifySession();
+
+  if (!/^data:image\/(png|jpe?g|gif|webp);base64,/.test(dataUrl)) {
+    return { ok: false, error: "That doesn't look like an image." };
+  }
+  if (dataUrl.length > MAX_AVATAR_DATA_URL_LENGTH) {
+    return { ok: false, error: "That image is too large." };
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { avatar: dataUrl } });
+  revalidatePath("/profile");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function removeAvatar(): Promise<AvatarActionResult> {
+  const { userId } = await verifySession();
+  await prisma.user.update({ where: { id: userId }, data: { avatar: null } });
+  revalidatePath("/profile");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export interface ChangePasswordState {
+  error?: string;
+  success?: boolean;
+}
+
+export async function changeOwnPassword(
+  _prevState: ChangePasswordState | undefined,
+  formData: FormData
+): Promise<ChangePasswordState> {
+  const { userId } = await verifySession();
+
+  const currentPassword = String(formData.get("currentPassword") ?? "");
+  const newPassword = String(formData.get("newPassword") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (!currentPassword || !newPassword) {
+    return { error: "Fill in all fields." };
+  }
+  if (newPassword.length < 8) {
+    return { error: "New password must be at least 8 characters." };
+  }
+  if (newPassword !== confirmPassword) {
+    return { error: "New passwords don't match." };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return { error: "Something went wrong — try logging in again." };
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    return { error: "Current password is incorrect." };
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  return { success: true };
+}
+
 // ---------- Backup & restore (admin only) ----------
 //
 // Covers every user's data — not just the admin's own — since it's meant as
@@ -768,6 +849,7 @@ export async function exportBackupData(): Promise<BackupData> {
       role: u.role,
       showEntryIcons: u.showEntryIcons,
       theme: u.theme,
+      avatar: u.avatar,
       createdAt: u.createdAt.toISOString(),
     })),
     categories: categories.map((c) => ({
