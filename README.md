@@ -31,10 +31,10 @@ git, so it never has to touch GitHub.
   "remaining" totals.
 - **Accounts** — everything above is private per person. Log in to see
   only your own months, categories, and Christmas list; nobody else's data
-  is visible to you. The `hazarduz` account (bootstrapped on first run) is
-  an **admin** and can add, remove, or reset the password of other
-  accounts from the Users page; accounts added afterwards are **standard**
-  by default.
+  is visible to you. The first account anyone creates becomes an
+  **admin**, who can add, remove, or reset the password of further
+  accounts from the Users page; accounts added afterwards are
+  **standard** by default.
 
 ## Tech stack
 
@@ -53,17 +53,10 @@ against a database of your choice. Either way, start by creating your
 cp .env.example .env
 ```
 
-Then fill in two things it needs before the first run:
-
-- `SESSION_SECRET` — generate one with `openssl rand -base64 32`. This
-  signs login sessions; without a real value the app falls back to an
-  insecure built-in secret (fine for poking around locally, not for
-  anything reachable beyond your own machine).
-- `ADMIN_PASSWORD` — the password for the first account, `hazarduz`
-  (change the username via `ADMIN_USERNAME` if you like). This account is
-  created as an **admin** the first time the database is seeded. Once it
-  exists, you don't need `ADMIN_PASSWORD` in `.env` any more — manage
-  further accounts from the Users page instead.
+Then set `SESSION_SECRET`, generated with `openssl rand -base64 32`.
+This signs login sessions; without a real value the app falls back to an
+insecure built-in secret (fine for poking around locally, not for
+anything reachable beyond your own machine).
 
 ### Option A: Docker Compose (app + database)
 
@@ -76,9 +69,12 @@ This builds and starts two containers:
 - `budgie-db-1` — Postgres, exposed on `localhost:5343`
 - `budgie-app-1` — the Next.js app, exposed on `localhost:3010`
 
-The app container runs migrations and seeds the admin account
-automatically on startup. Open
-[http://localhost:3010](http://localhost:3010) and sign in as `hazarduz`.
+The app container runs migrations automatically on startup. Open
+[http://localhost:3010](http://localhost:3010) — since the database is
+empty, you'll land on a "Create the first account" screen instead of a
+login form. Whatever username and password you choose there becomes the
+**admin** account, so claim it before anyone else can reach the app on
+your network.
 
 ### Option B: Local dev server
 
@@ -97,12 +93,11 @@ Then set up and run the app:
 ```bash
 npm install
 npm run db:migrate   # creates tables
-npm run db:seed      # bootstraps the hazarduz admin account
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and sign in as
-`hazarduz`.
+Open [http://localhost:3000](http://localhost:3000) — the first account
+you create there becomes the admin.
 
 ## Useful scripts
 
@@ -113,7 +108,6 @@ Open [http://localhost:3000](http://localhost:3000) and sign in as
 | `npm run start`        | Run the production build                        |
 | `npm run db:migrate`   | Create/update tables from `prisma/schema.prisma`|
 | `npm run db:deploy`    | Apply migrations (for production deploys)       |
-| `npm run db:seed`      | Bootstrap the hazarduz admin account (first run only) |
 | `npm run db:studio`    | Browse/edit your data in Prisma Studio          |
 
 ## Deploying
@@ -129,3 +123,10 @@ instance — if you expose it beyond your local network, put it behind
 HTTPS (a reverse proxy like Caddy or Nginx is the easiest way) so login
 credentials and session cookies aren't sent in the clear, and make sure
 `SESSION_SECRET` is a real generated value, not the built-in fallback.
+Claim the first (admin) account locally before exposing the app more
+widely — anyone who reaches the "Create the first account" screen before
+you do becomes the admin instead.
+
+Forking this for your own family or household? There's nothing to
+rename — deploy it fresh, and whoever sets it up first just creates their
+own admin account on first run.
