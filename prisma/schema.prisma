@@ -30,6 +30,7 @@ model User {
   username          String             @unique
   passwordHash      String
   role              Role               @default(STANDARD)
+  showEntryIcons    Boolean            @default(true)
   createdAt         DateTime           @default(now())
   months            Month[]
   categories        Category[]
