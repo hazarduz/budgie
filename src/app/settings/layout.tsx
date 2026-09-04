@@ -11,6 +11,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   ];
   if (session.role === "ADMIN") {
     links.push({ href: "/settings/users", label: "Users" });
+    links.push({ href: "/settings/backup", label: "Backup" });
   }
 
   return (
