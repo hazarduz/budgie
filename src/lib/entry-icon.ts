@@ -54,7 +54,7 @@ const RULES: IconRule[] = [
   { pattern: /life insurance|insurance/i, icon: { kind: "emoji", value: "🛡️" } },
   { pattern: /child maintenance/i, icon: { kind: "emoji", value: "👨‍👩‍👧" } },
   { pattern: /gym|fitness/i, icon: { kind: "emoji", value: "🏋️" } },
-  { pattern: /grocer|shopping|supermarket/i, icon: { kind: "emoji", value: "🛒" } },
+  { pattern: /grocer|shop|supermarket/i, icon: { kind: "emoji", value: "🛒" } },
   { pattern: /credit card|store card|loan|\bdebt\b|\bowe\b|\bpay\b.*card/i, icon: { kind: "emoji", value: "💳" } },
   { pattern: /luxury/i, icon: { kind: "emoji", value: "✨" } },
   { pattern: /christmas|gift/i, icon: { kind: "emoji", value: "🎁" } },

@@ -2,38 +2,25 @@
 
 Budgie is a self-hosted personal budget tracker — a home for the monthly
 budget spreadsheet, rebuilt as a small web app. It keeps a running month
-(Start With → Monthly Debits → Planned Spend → Total Remaining), a full
-history you can browse by year and month, a category system for tagging
-where money goes, and a year-round Christmas gift tracker with its own
-budget.
+(Start With → Monthly Debits → Total Left → Planned Spend → Total Remain),
+a full history you can browse by year and month, a dashboard of trends over
+time, a category and account system for tagging where money goes, a debts
+tracker, and a year-round Christmas gift tracker with its own budget.
 
 The app's source lives in this GitHub repository — clone it, run it on
 your own machine or server, and push/pull as you would any other codebase.
 Your budget data itself lives in your own **PostgreSQL** database, not in
 git, so it never has to touch GitHub.
 
+![This Month](docs/screenshots/this-month.png)
+
 ## Features
 
 - **This Month** — your current month's budget: an editable starting
   balance, a list of monthly debits, a list of planned spend, and running
   totals after each, styled after the original spreadsheet's colour-coded
-  bars.
-- **History** — every month you've tracked, browsable by year via a
-  calendar-style grid, plus a flat table for scanning totals at a glance.
-- **Categories** — editable tags (Bills, Groceries, Luxury, Purchase, …)
-  you can add, rename, recolour, or remove from Settings → Categories.
-  Each entry can also carry free-text notes.
-- **Accounts** — editable tags (e.g. "Home", "My Bills", "Extra Spends")
-  from Settings → Accounts, for grouping entries by where the money
-  actually needs to go. Tag entries with one to see running totals per
-  account in a sidebar on the monthly page — handy for knowing how much
-  to transfer where.
-- **Icons** — entries and debts automatically get a little icon next to
-  their name based on what they're called — a house for "Rent", a water
-  drop for "Water", a phone for "O2" or "EE", recognisable brand marks
-  for things like "Capital One" or "Netflix" where possible, and a
-  sensible fallback otherwise. No configuration needed; can be turned
-  off per-account from Settings → Preferences.
+  bars. Entries tagged with an account roll up into a "Transfer To"
+  sidebar, so you know at a glance how much needs to move where.
 - **Copy-forward** — starting a new month can copy last month's monthly
   debits (amount, category, account, and notes) across so you're not
   retyping Rent, Council Tax, etc. every time.
@@ -45,13 +32,42 @@ git, so it never has to touch GitHub.
 - **Dashboard** — trends across your months: a line chart of Start With /
   Outgoings / Remaining over time, and bar charts of spend by category
   and by account, all filterable by year, month, category, and account.
-- **Christmas** — a standalone tracker for gifts bought throughout the
-  year, with an editable budget (defaults to £250) and running "spent" /
-  "remaining" totals.
+
+  ![Dashboard](docs/screenshots/dashboard.png)
+
+- **History** — every month you've tracked, browsable by year via a
+  calendar-style grid, plus a flat table for scanning totals at a glance.
+
+  ![History](docs/screenshots/history.png)
+
+- **Categories** — editable tags (Bills, Groceries, Luxury, Purchase, …)
+  you can add, rename, recolour, or remove from Settings → Categories.
+  Each entry can also carry free-text notes.
+- **Accounts** — editable tags (e.g. "Home", "My Bills", "Extra Spends")
+  from Settings → Accounts, for grouping entries by where the money
+  actually needs to go. Tag entries with one to see running totals per
+  account in the sidebar on the monthly page — handy for knowing how much
+  to transfer where.
+- **Icons** — entries and debts automatically get a little icon next to
+  their name based on what they're called — a house for "Rent", a water
+  drop for "Water", a phone for "O2" or "EE", recognisable brand marks
+  for things like "Capital One" or "Netflix" where possible, and a
+  sensible fallback otherwise. No configuration needed; can be turned
+  off from Settings → Preferences if you'd rather keep things plain
+  (on by default).
 - **Debts** — a log for things you owe (phone contracts, credit cards,
   store cards like Argos Pay, …) and things owed to you (money from
   friends or family), each with an optional category, monthly payment,
   and end date, and a checkbox to mark it settled.
+
+  ![Debts](docs/screenshots/debts.png)
+
+- **Christmas** — a standalone tracker for gifts bought throughout the
+  year, with an editable budget (defaults to £250) and running "spent" /
+  "remaining" totals.
+
+  ![Christmas](docs/screenshots/christmas.png)
+
 - **Logins** — everything above is private per person. Log in to see
   only your own months, categories, and Christmas list; nobody else's data
   is visible to you. The first login anyone creates becomes an
@@ -64,6 +80,7 @@ git, so it never has to touch GitHub.
 - [Next.js](https://nextjs.org) (App Router) + TypeScript
 - Tailwind CSS
 - [Prisma](https://www.prisma.io) + PostgreSQL
+- [Recharts](https://recharts.org) for the dashboard
 
 ## Getting started
 
@@ -161,3 +178,8 @@ service in the browser — no personal or financial data leaves your
 instance, just the brand's own name. Every other entry gets a plain
 emoji with no network request, and if the favicon fails to load for any
 reason (offline, blocked), it falls back to an emoji automatically.
+
+---
+
+_Screenshots above are from a demo account with made-up data — not a
+real budget._
