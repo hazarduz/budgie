@@ -23,8 +23,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://budgie:budgie@db:5432/budgie?schema=public
-      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env — generate one with: openssl rand -base64 32}
+      DATABASE_URL: "postgresql://budgie:budgie@db:5432/budgie?schema=public"
+      SESSION_SECRET: "${SESSION_SECRET:?Set SESSION_SECRET in your .env file (generate one with openssl rand -base64 32)}"
     ports:
       - "3010:3000"
 
