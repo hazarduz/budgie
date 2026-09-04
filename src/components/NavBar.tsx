@@ -13,6 +13,7 @@ export async function NavBar() {
     { href: `/months/${currentSlug}`, label: "This Month" },
     { href: "/history", label: "History" },
     { href: "/christmas", label: "Christmas" },
+    { href: "/debts", label: "Debts" },
     { href: "/settings/categories", label: "Categories" },
   ];
   if (session?.role === "ADMIN") {

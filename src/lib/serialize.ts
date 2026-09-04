@@ -1,4 +1,4 @@
-import type { Category, ChristmasEntry, Entry, EntryType } from "@prisma/client";
+import type { Category, ChristmasEntry, Debt, DebtDirection, Entry, EntryType } from "@prisma/client";
 
 export interface PlainCategory {
   id: string;
@@ -55,5 +55,31 @@ export function serializeChristmasEntry(entry: ChristmasEntry): PlainChristmasEn
     amount: Number(entry.amount),
     purchased: entry.purchased,
     notes: entry.notes,
+  };
+}
+
+export interface PlainDebt {
+  id: string;
+  direction: DebtDirection;
+  name: string;
+  category: string | null;
+  amount: number;
+  monthlyPayment: number | null;
+  endDate: string | null;
+  settled: boolean;
+  notes: string | null;
+}
+
+export function serializeDebt(debt: Debt): PlainDebt {
+  return {
+    id: debt.id,
+    direction: debt.direction,
+    name: debt.name,
+    category: debt.category,
+    amount: Number(debt.amount),
+    monthlyPayment: debt.monthlyPayment === null ? null : Number(debt.monthlyPayment),
+    endDate: debt.endDate ? debt.endDate.toISOString() : null,
+    settled: debt.settled,
+    notes: debt.notes,
   };
 }

@@ -29,6 +29,10 @@ git, so it never has to touch GitHub.
 - **Christmas** — a standalone tracker for gifts bought throughout the
   year, with an editable budget (defaults to £250) and running "spent" /
   "remaining" totals.
+- **Debts** — a log for things you owe (phone contracts, credit cards,
+  store cards like Argos Pay, …) and things owed to you (money from
+  friends or family), each with an optional category, monthly payment,
+  and end date, and a checkbox to mark it settled.
 - **Accounts** — everything above is private per person. Log in to see
   only your own months, categories, and Christmas list; nobody else's data
   is visible to you. The first account anyone creates becomes an

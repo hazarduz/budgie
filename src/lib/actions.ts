@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { addMonths, type MonthKey } from "@/lib/months";
 import { verifySession, requireAdmin } from "@/lib/dal";
 import { provisionUserDefaults } from "@/lib/provision-user";
-import { EntryType, Role, type Prisma } from "@prisma/client";
+import { EntryType, Role, DebtDirection, type Prisma } from "@prisma/client";
 
 // ---------- Months ----------
 
@@ -331,6 +331,81 @@ export async function deleteChristmasEntry(id: string) {
   const { userId } = await verifySession();
   await prisma.christmasEntry.deleteMany({ where: { id, userId } });
   revalidatePath("/christmas");
+}
+
+// ---------- Debts ----------
+
+export async function listDebts() {
+  const { userId } = await verifySession();
+  return prisma.debt.findMany({
+    where: { userId },
+    orderBy: [{ settled: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function createDebt(input: {
+  direction: DebtDirection;
+  name: string;
+  category?: string | null;
+  amount: number;
+  monthlyPayment?: number | null;
+  endDate?: string | null;
+  notes?: string | null;
+}) {
+  const { userId } = await verifySession();
+  await prisma.debt.create({
+    data: {
+      userId,
+      direction: input.direction,
+      name: input.name,
+      category: input.category || null,
+      amount: input.amount,
+      monthlyPayment: input.monthlyPayment ?? null,
+      endDate: input.endDate ? new Date(input.endDate) : null,
+      notes: input.notes || null,
+    },
+  });
+  revalidatePath("/debts");
+}
+
+export async function updateDebt(
+  id: string,
+  input: {
+    direction: DebtDirection;
+    name: string;
+    category?: string | null;
+    amount: number;
+    monthlyPayment?: number | null;
+    endDate?: string | null;
+    notes?: string | null;
+  }
+) {
+  const { userId } = await verifySession();
+  await prisma.debt.updateMany({
+    where: { id, userId },
+    data: {
+      direction: input.direction,
+      name: input.name,
+      category: input.category || null,
+      amount: input.amount,
+      monthlyPayment: input.monthlyPayment ?? null,
+      endDate: input.endDate ? new Date(input.endDate) : null,
+      notes: input.notes || null,
+    },
+  });
+  revalidatePath("/debts");
+}
+
+export async function toggleDebtSettled(id: string, settled: boolean) {
+  const { userId } = await verifySession();
+  await prisma.debt.updateMany({ where: { id, userId }, data: { settled } });
+  revalidatePath("/debts");
+}
+
+export async function deleteDebt(id: string) {
+  const { userId } = await verifySession();
+  await prisma.debt.deleteMany({ where: { id, userId } });
+  revalidatePath("/debts");
 }
 
 // ---------- Users (admin only) ----------
