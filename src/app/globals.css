@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
+/* Dark mode is driven by a `dark` class on <html>, resolved server-side for
+   explicit Light/Dark preferences and by a small blocking script for
+   "System" (see ThemeInit in layout.tsx), rather than Tailwind's default
+   prefers-color-scheme media variant — so a user's choice always wins. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  color-scheme: light;
   --background: #f4faf8;
   --foreground: #0f172a;
   --surface: #ffffff;
@@ -18,14 +25,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #08120f;
-    --foreground: #e7f5f1;
-    --surface: #0f1e1a;
-    --surface-muted: #142a24;
-    --border: #1e3931;
-  }
+.dark {
+  color-scheme: dark;
+  --background: #08120f;
+  --foreground: #e7f5f1;
+  --surface: #0f1e1a;
+  --surface-muted: #142a24;
+  --border: #1e3931;
 }
 
 body {
