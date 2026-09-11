@@ -46,31 +46,34 @@ model User {
   christmasEntries  ChristmasEntry[]
   christmasSettings ChristmasSettings?
   debts             Debt[]
+  masterBills       MasterBill[]
 }
 
 model Category {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  name      String
-  color     String   @default("#0d9488")
-  isDefault Boolean  @default(false)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  entries   Entry[]
+  id          String       @id @default(cuid())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  name        String
+  color       String       @default("#0d9488")
+  isDefault   Boolean      @default(false)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  entries     Entry[]
+  masterBills MasterBill[]
 
   @@unique([userId, name])
 }
 
 model Account {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  name      String
-  color     String   @default("#0d9488")
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  entries   Entry[]
+  id          String       @id @default(cuid())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  name        String
+  color       String       @default("#0d9488")
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  entries     Entry[]
+  masterBills MasterBill[]
 
   @@unique([userId, name])
 }
@@ -81,7 +84,7 @@ model Month {
   userId    String
   year      Int
   month     Int
-  startWith Decimal  @db.Decimal(10, 2) @default(0)
+  startWith Decimal  @default(0) @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   entries   Entry[]
@@ -94,11 +97,6 @@ model Entry {
   id         String    @id @default(cuid())
   month      Month     @relation(fields: [monthId], references: [id], onDelete: Cascade)
   monthId    String
-  // Shared across the copy-forward lineage of "the same" recurring debit, so an
-  // edit can be applied to this month only or to this-and-future months. A
-  // freshly created entry starts as its own series (seriesId == id); copying
-  // it forward carries the seriesId along.
-  seriesId   String
   name       String
   amount     Decimal   @db.Decimal(10, 2)
   type       EntryType @default(DEBIT)
@@ -112,14 +110,37 @@ model Entry {
   updatedAt  DateTime  @updatedAt
 
   @@index([monthId])
-  @@index([seriesId])
+}
+
+// A recurring monthly debit (Rent, Council Tax, ...) that new months are
+// auto-populated from when created. Editing a bill here only affects months
+// created afterwards — it's a template, not a live link, so already-created
+// months (including history) never change retroactively.
+model MasterBill {
+  id         String    @id @default(cuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  name       String
+  amount     Decimal   @db.Decimal(10, 2)
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
+  account    Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  accountId  String?
+  notes      String?
+  // Paused bills are kept (not deleted) but skipped when populating a new month.
+  active     Boolean   @default(true)
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 model ChristmasSettings {
   id     String  @id @default(cuid())
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String  @unique
-  budget Decimal @db.Decimal(10, 2) @default(250)
+  budget Decimal @default(250) @db.Decimal(10, 2)
 }
 
 model ChristmasEntry {

@@ -1,4 +1,13 @@
-import type { Account, Category, ChristmasEntry, Debt, DebtDirection, Entry, EntryType } from "@prisma/client";
+import type {
+  Account,
+  Category,
+  ChristmasEntry,
+  Debt,
+  DebtDirection,
+  Entry,
+  EntryType,
+  MasterBill,
+} from "@prisma/client";
 
 export interface PlainCategory {
   id: string;
@@ -71,6 +80,38 @@ export function serializeChristmasEntry(entry: ChristmasEntry): PlainChristmasEn
     amount: Number(entry.amount),
     purchased: entry.purchased,
     notes: entry.notes,
+  };
+}
+
+export interface PlainMasterBill {
+  id: string;
+  name: string;
+  amount: number;
+  categoryId: string | null;
+  category: PlainCategory | null;
+  accountId: string | null;
+  account: PlainAccount | null;
+  notes: string | null;
+  active: boolean;
+}
+
+export function serializeMasterBill(
+  bill: MasterBill & { category: Category | null; account: Account | null }
+): PlainMasterBill {
+  return {
+    id: bill.id,
+    name: bill.name,
+    amount: Number(bill.amount),
+    categoryId: bill.categoryId,
+    category: bill.category
+      ? { id: bill.category.id, name: bill.category.name, color: bill.category.color }
+      : null,
+    accountId: bill.accountId,
+    account: bill.account
+      ? { id: bill.account.id, name: bill.account.name, color: bill.account.color }
+      : null,
+    notes: bill.notes,
+    active: bill.active,
   };
 }
 

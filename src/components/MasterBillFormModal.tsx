@@ -1,57 +1,53 @@
 "use client";
 
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import { EntryType } from "@prisma/client";
-import { createEntry, deleteEntry, updateEntry } from "@/lib/actions";
-import type { PlainAccount, PlainCategory, PlainEntry } from "@/lib/serialize";
+import { createMasterBill, deleteMasterBill, updateMasterBill } from "@/lib/actions";
+import type { PlainAccount, PlainCategory, PlainMasterBill } from "@/lib/serialize";
 
-export function EntryFormModal({
-  monthId,
+export function MasterBillFormModal({
   categories,
   accounts,
-  defaultType = EntryType.DEBIT,
-  entry,
+  bill,
   trigger,
 }: {
-  monthId: string;
   categories: PlainCategory[];
   accounts: PlainAccount[];
-  defaultType?: EntryType;
-  entry?: PlainEntry;
+  bill?: PlainMasterBill;
   trigger: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const isEdit = Boolean(entry);
+  const isEdit = Boolean(bill);
 
   function submit() {
     if (!formRef.current) return;
     const formData = new FormData(formRef.current);
     const name = String(formData.get("name") ?? "").trim();
     const amount = Number(formData.get("amount"));
-    const type = formData.get("type") as EntryType;
     const categoryId = String(formData.get("categoryId") ?? "") || null;
     const accountId = String(formData.get("accountId") ?? "") || null;
     const notes = String(formData.get("notes") ?? "").trim() || null;
+    const active = formData.get("active") === "on";
 
     if (!name || !Number.isFinite(amount)) return;
 
     startTransition(async () => {
-      if (isEdit && entry) {
-        await updateEntry(entry.id, { name, amount, type, categoryId, accountId, notes });
+      if (isEdit && bill) {
+        await updateMasterBill(bill.id, { name, amount, categoryId, accountId, notes, active });
       } else {
-        await createEntry({ monthId, name, amount, type, categoryId, accountId, notes });
+        await createMasterBill({ name, amount, categoryId, accountId, notes });
       }
       setOpen(false);
     });
   }
 
   function handleDelete() {
-    if (!entry) return;
-    if (!confirm(`Delete "${entry.name}"?`)) return;
+    if (!bill) return;
+    if (!confirm(`Delete "${bill.name}" from your Master bills? Months already created keep their own copy.`))
+      return;
     startTransition(async () => {
-      await deleteEntry(entry.id);
+      await deleteMasterBill(bill.id);
       setOpen(false);
     });
   }
@@ -67,13 +63,8 @@ export function EntryFormModal({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => setOpen(false)}
         >
-          <div
-            className="card w-full max-w-md p-5 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="mb-4 text-lg font-semibold">
-              {isEdit ? "Edit entry" : "Add entry"}
-            </h2>
+          <div className="card w-full max-w-md p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-lg font-semibold">{isEdit ? "Edit bill" : "Add bill"}</h2>
             <form
               ref={formRef}
               onSubmit={(e) => {
@@ -87,48 +78,31 @@ export function EntryFormModal({
                 <input
                   name="name"
                   required
-                  defaultValue={entry?.name}
+                  defaultValue={bill?.name}
                   className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
                   placeholder="e.g. Rent"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500">
-                    Amount (£)
-                  </label>
-                  <input
-                    name="amount"
-                    type="number"
-                    step="0.01"
-                    required
-                    defaultValue={entry?.amount}
-                    className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500">Type</label>
-                  <select
-                    name="type"
-                    defaultValue={entry?.type ?? defaultType}
-                    className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
-                  >
-                    <option value={EntryType.DEBIT}>Monthly debit</option>
-                    <option value={EntryType.PLANNED}>Planned spend</option>
-                  </select>
-                </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Amount (£)</label>
+                <input
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  required
+                  defaultValue={bill?.amount}
+                  className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
+                  placeholder="0.00"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500">
-                    Category
-                  </label>
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Category</label>
                   <select
                     name="categoryId"
-                    defaultValue={entry?.categoryId ?? ""}
+                    defaultValue={bill?.categoryId ?? ""}
                     className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
                   >
                     <option value="">None</option>
@@ -140,12 +114,10 @@ export function EntryFormModal({
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500">
-                    Account
-                  </label>
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Account</label>
                   <select
                     name="accountId"
-                    defaultValue={entry?.accountId ?? ""}
+                    defaultValue={bill?.accountId ?? ""}
                     className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
                   >
                     <option value="">None</option>
@@ -162,12 +134,18 @@ export function EntryFormModal({
                 <label className="mb-1 block text-xs font-medium text-slate-500">Notes</label>
                 <textarea
                   name="notes"
-                  defaultValue={entry?.notes ?? ""}
+                  defaultValue={bill?.notes ?? ""}
                   rows={2}
                   className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
-                  placeholder="e.g. 5 of 27, Hotel Exmouth"
                 />
               </div>
+
+              {isEdit && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="active" defaultChecked={bill?.active ?? true} />
+                  Include in new months
+                </label>
+              )}
 
               <div className="flex items-center justify-between pt-2">
                 <div>

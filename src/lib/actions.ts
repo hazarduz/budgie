@@ -2,10 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { addMonths, type MonthKey } from "@/lib/months";
+import { addMonths } from "@/lib/months";
 import { verifySession, requireAdmin, getOptionalSession } from "@/lib/dal";
 import { provisionUserDefaults } from "@/lib/provision-user";
 import { deleteSession } from "@/lib/session";
@@ -27,36 +26,6 @@ export async function getMonth(year: number, month: number) {
   });
 }
 
-export async function findPreviousMonthWithEntries(key: MonthKey) {
-  const { userId } = await verifySession();
-  const months = await prisma.month.findMany({
-    where: {
-      userId,
-      OR: buildBeforeClauses(key),
-    },
-    orderBy: [{ year: "desc" }, { month: "desc" }],
-    include: { entries: true },
-    take: 12,
-  });
-  return months.find((m) => m.entries.length > 0) ?? null;
-}
-
-function buildBeforeClauses(key: MonthKey) {
-  // Any month strictly before `key`.
-  return [
-    { year: { lt: key.year } },
-    { year: key.year, month: { lt: key.month } },
-  ];
-}
-
-function buildOnOrAfterClauses(key: MonthKey) {
-  // `key`'s month, or any month after it.
-  return [
-    { year: { gt: key.year } },
-    { year: key.year, month: { gte: key.month } },
-  ];
-}
-
 function monthPath(year: number, month: number) {
   return `/months/${year}-${String(month).padStart(2, "0")}`;
 }
@@ -64,7 +33,7 @@ function monthPath(year: number, month: number) {
 export async function createMonth(
   year: number,
   month: number,
-  options: { copyFromPrevious: boolean }
+  options: { populateFromMaster: boolean }
 ) {
   const { userId } = await verifySession();
 
@@ -75,24 +44,22 @@ export async function createMonth(
     return { id: existing.id, year: existing.year, month: existing.month };
   }
 
-  let entriesToCopy: Prisma.EntryUncheckedCreateWithoutMonthInput[] = [];
+  let entriesToCreate: Prisma.EntryUncheckedCreateWithoutMonthInput[] = [];
 
-  if (options.copyFromPrevious) {
-    const source = await findPreviousMonthWithEntries({ year, month });
-    if (source) {
-      entriesToCopy = source.entries
-        .filter((e) => e.type === EntryType.DEBIT)
-        .map((e) => ({
-          seriesId: e.seriesId,
-          name: e.name,
-          amount: e.amount,
-          type: e.type,
-          categoryId: e.categoryId,
-          accountId: e.accountId,
-          notes: e.notes,
-          sortOrder: e.sortOrder,
-        }));
-    }
+  if (options.populateFromMaster) {
+    const bills = await prisma.masterBill.findMany({
+      where: { userId, active: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+    entriesToCreate = bills.map((b, index) => ({
+      name: b.name,
+      amount: b.amount,
+      type: EntryType.DEBIT,
+      categoryId: b.categoryId,
+      accountId: b.accountId,
+      notes: b.notes,
+      sortOrder: index,
+    }));
   }
 
   const created = await prisma.month.create({
@@ -101,7 +68,7 @@ export async function createMonth(
       year,
       month,
       startWith: 0,
-      entries: { create: entriesToCopy },
+      entries: { create: entriesToCreate },
     },
   });
 
@@ -182,11 +149,8 @@ export async function createEntry(input: {
     if (!account) throw new Error("Account not found.");
   }
 
-  const id = randomUUID();
   await prisma.entry.create({
     data: {
-      id,
-      seriesId: id,
       monthId: input.monthId,
       name: input.name,
       amount: input.amount,
@@ -210,8 +174,7 @@ export async function updateEntry(
     categoryId?: string | null;
     accountId?: string | null;
     notes?: string | null;
-  },
-  applyToFuture = false
+  }
 ) {
   const { userId } = await verifySession();
   const owned = await findOwnedEntry(userId, entryId);
@@ -226,46 +189,35 @@ export async function updateEntry(
     if (!account) throw new Error("Account not found.");
   }
 
-  const data = {
-    name: input.name,
-    amount: input.amount,
-    type: input.type,
-    categoryId: input.categoryId || null,
-    accountId: input.accountId || null,
-    notes: input.notes || null,
-  };
-
-  await prisma.entry.update({ where: { id: entryId }, data });
-
-  const affectedMonths = new Set([monthPath(owned.month.year, owned.month.month)]);
-
-  if (applyToFuture) {
-    const futureSiblings = await prisma.entry.findMany({
-      where: {
-        seriesId: owned.seriesId,
-        id: { not: entryId },
-        month: {
-          userId,
-          OR: buildOnOrAfterClauses({ year: owned.month.year, month: owned.month.month }),
-        },
-      },
-      select: { id: true, month: { select: { year: true, month: true } } },
-    });
-
-    if (futureSiblings.length > 0) {
-      await prisma.entry.updateMany({
-        where: { id: { in: futureSiblings.map((e) => e.id) } },
-        data,
-      });
-      for (const sibling of futureSiblings) {
-        affectedMonths.add(monthPath(sibling.month.year, sibling.month.month));
-      }
-    }
-  }
+  await prisma.entry.update({
+    where: { id: entryId },
+    data: {
+      name: input.name,
+      amount: input.amount,
+      type: input.type,
+      categoryId: input.categoryId || null,
+      accountId: input.accountId || null,
+      notes: input.notes || null,
+    },
+  });
 
   revalidatePath("/history");
   revalidatePath("/");
-  for (const path of affectedMonths) revalidatePath(path);
+  revalidatePath(monthPath(owned.month.year, owned.month.month));
+}
+
+export async function reorderEntries(monthId: string, orderedIds: string[]) {
+  const { userId } = await verifySession();
+  const month = await prisma.month.findFirst({ where: { id: monthId, userId } });
+  if (!month) throw new Error("Month not found.");
+
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.entry.update({ where: { id, monthId }, data: { sortOrder: index } })
+    )
+  );
+
+  revalidatePath(monthPath(month.year, month.month));
 }
 
 export async function deleteEntry(entryId: string) {
@@ -277,6 +229,116 @@ export async function deleteEntry(entryId: string) {
   revalidatePath("/history");
   revalidatePath("/");
   revalidatePath(monthPath(owned.month.year, owned.month.month));
+}
+
+// ---------- Master bills ----------
+//
+// Templates for recurring monthly debits (Rent, Council Tax, ...). A new
+// month's Monthly Debits are populated from these at creation time; after
+// that the entries are independent, so editing a bill here never changes
+// a month that already exists.
+
+export async function listMasterBills() {
+  const { userId } = await verifySession();
+  return prisma.masterBill.findMany({
+    where: { userId },
+    include: { category: true, account: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function createMasterBill(input: {
+  name: string;
+  amount: number;
+  categoryId?: string | null;
+  accountId?: string | null;
+  notes?: string | null;
+}) {
+  const { userId } = await verifySession();
+
+  if (input.categoryId) {
+    const category = await prisma.category.findFirst({ where: { id: input.categoryId, userId } });
+    if (!category) throw new Error("Category not found.");
+  }
+  if (input.accountId) {
+    const account = await prisma.account.findFirst({ where: { id: input.accountId, userId } });
+    if (!account) throw new Error("Account not found.");
+  }
+
+  const count = await prisma.masterBill.count({ where: { userId } });
+  await prisma.masterBill.create({
+    data: {
+      userId,
+      name: input.name,
+      amount: input.amount,
+      categoryId: input.categoryId || null,
+      accountId: input.accountId || null,
+      notes: input.notes || null,
+      sortOrder: count,
+    },
+  });
+  revalidatePath("/master");
+}
+
+async function findOwnedMasterBill(userId: string, id: string) {
+  return prisma.masterBill.findFirst({ where: { id, userId } });
+}
+
+export async function updateMasterBill(
+  id: string,
+  input: {
+    name: string;
+    amount: number;
+    categoryId?: string | null;
+    accountId?: string | null;
+    notes?: string | null;
+    active: boolean;
+  }
+) {
+  const { userId } = await verifySession();
+  const owned = await findOwnedMasterBill(userId, id);
+  if (!owned) throw new Error("Bill not found.");
+
+  if (input.categoryId) {
+    const category = await prisma.category.findFirst({ where: { id: input.categoryId, userId } });
+    if (!category) throw new Error("Category not found.");
+  }
+  if (input.accountId) {
+    const account = await prisma.account.findFirst({ where: { id: input.accountId, userId } });
+    if (!account) throw new Error("Account not found.");
+  }
+
+  await prisma.masterBill.update({
+    where: { id },
+    data: {
+      name: input.name,
+      amount: input.amount,
+      categoryId: input.categoryId || null,
+      accountId: input.accountId || null,
+      notes: input.notes || null,
+      active: input.active,
+    },
+  });
+  revalidatePath("/master");
+}
+
+export async function deleteMasterBill(id: string) {
+  const { userId } = await verifySession();
+  const owned = await findOwnedMasterBill(userId, id);
+  if (!owned) throw new Error("Bill not found.");
+
+  await prisma.masterBill.delete({ where: { id } });
+  revalidatePath("/master");
+}
+
+export async function reorderMasterBills(orderedIds: string[]) {
+  const { userId } = await verifySession();
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.masterBill.update({ where: { id, userId }, data: { sortOrder: index } })
+    )
+  );
+  revalidatePath("/master");
 }
 
 // ---------- Categories ----------
@@ -826,7 +888,7 @@ export async function changeOwnPassword(
 export async function exportBackupData(): Promise<BackupData> {
   await requireAdmin();
 
-  const [users, categories, accounts, months, entries, christmasSettings, christmasEntries, debts] =
+  const [users, categories, accounts, months, entries, christmasSettings, christmasEntries, debts, masterBills] =
     await Promise.all([
       prisma.user.findMany(),
       prisma.category.findMany(),
@@ -836,6 +898,7 @@ export async function exportBackupData(): Promise<BackupData> {
       prisma.christmasSettings.findMany(),
       prisma.christmasEntry.findMany(),
       prisma.debt.findMany(),
+      prisma.masterBill.findMany(),
     ]);
 
   return {
@@ -881,7 +944,6 @@ export async function exportBackupData(): Promise<BackupData> {
     entries: entries.map((e) => ({
       id: e.id,
       monthId: e.monthId,
-      seriesId: e.seriesId,
       name: e.name,
       amount: Number(e.amount),
       type: e.type,
@@ -923,6 +985,19 @@ export async function exportBackupData(): Promise<BackupData> {
       sortOrder: d.sortOrder,
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),
+    })),
+    masterBills: masterBills.map((b) => ({
+      id: b.id,
+      userId: b.userId,
+      name: b.name,
+      amount: Number(b.amount),
+      categoryId: b.categoryId,
+      accountId: b.accountId,
+      notes: b.notes,
+      active: b.active,
+      sortOrder: b.sortOrder,
+      createdAt: b.createdAt.toISOString(),
+      updatedAt: b.updatedAt.toISOString(),
     })),
   };
 }
@@ -1006,6 +1081,13 @@ export async function restoreBackup(
           endDate: d.endDate ? new Date(d.endDate) : null,
           createdAt: new Date(d.createdAt),
           updatedAt: new Date(d.updatedAt),
+        })),
+      });
+      await tx.masterBill.createMany({
+        data: data.masterBills.map((b) => ({
+          ...b,
+          createdAt: new Date(b.createdAt),
+          updatedAt: new Date(b.updatedAt),
         })),
       });
     });

@@ -21,14 +21,17 @@ git, so it never has to touch GitHub.
   totals after each, styled after the original spreadsheet's colour-coded
   bars. Entries tagged with an account roll up into a "Transfer To"
   sidebar, so you know at a glance how much needs to move where.
-- **Copy-forward** — starting a new month can copy last month's monthly
-  debits (amount, category, account, and notes) across so you're not
-  retyping Rent, Council Tax, etc. every time.
-- **Edit this month or every future one** — if a copied-forward debit's
-  price changes (a phone contract going up, say), editing it offers
-  "Save this month" or "Save + future months". The latter updates every
-  later month that debit was copied into, but never touches past months
-  — so old months stay accurate for the dashboard's trends.
+- **Master** — a single list of your recurring monthly debits (Rent,
+  Council Tax, the phone contract, …). Creating a new month pulls its
+  Monthly Debits from whatever's active here, so you're not retyping the
+  same bills every month. A bill only affects months created *after* you
+  change it — already-created months keep their own amounts, editable as
+  usual, so old months stay accurate for the dashboard's trends. Pause a
+  bill instead of deleting it to leave it out of new months without
+  losing it.
+- **Reorder** — Monthly Debits, Planned Spend, and the Master list can
+  all be dragged into whatever order suits you: hit "Reorder" and
+  drag by the handle, or "Done" to lock it back in.
 - **Dashboard** — trends across your months: a line chart of Start With /
   Outgoings / Remaining over time, and bar charts of spend by category
   and by account, all filterable by year, month, category, and account.
@@ -78,8 +81,9 @@ git, so it never has to touch GitHub.
   picture (cropped and resized right in the browser before it's saved)
   and change your own password.
 - **Backup & restore** — the admin can download a single JSON file with
-  everything in Budgie (every user's months, categories, accounts, debts,
-  and Christmas lists) from Settings → Backup, and restore it again later
+  everything in Budgie (every user's months, Master bills, categories,
+  accounts, debts, and Christmas lists) from Settings → Backup, and
+  restore it again later
   — on the same install or a fresh one. Restoring is also offered right on
   the "Create the first account" screen, so recovering after losing the
   database entirely doesn't require an account to already exist.
@@ -90,6 +94,7 @@ git, so it never has to touch GitHub.
 - Tailwind CSS
 - [Prisma](https://www.prisma.io) + PostgreSQL
 - [Recharts](https://recharts.org) for the dashboard
+- [dnd kit](https://dndkit.com) for drag-to-reorder lists
 
 ## Getting started
 

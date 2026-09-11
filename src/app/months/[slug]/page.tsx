@@ -1,12 +1,6 @@
 import { notFound } from "next/navigation";
 import clsx from "clsx";
-import {
-  getMonth,
-  findPreviousMonthWithEntries,
-  listCategories,
-  listAccounts,
-  getShowEntryIcons,
-} from "@/lib/actions";
+import { getMonth, listCategories, listAccounts, getShowEntryIcons } from "@/lib/actions";
 import { parseMonthSlug } from "@/lib/months";
 import { serializeAccount, serializeCategory, serializeEntry } from "@/lib/serialize";
 import { EntryType } from "@prisma/client";
@@ -14,8 +8,7 @@ import { MonthNav } from "@/components/MonthNav";
 import { CreateMonthPrompt } from "@/components/CreateMonthPrompt";
 import { StatBar } from "@/components/StatBar";
 import { StartWithEditor } from "@/components/StartWithEditor";
-import { EntryRow } from "@/components/EntryRow";
-import { EntryFormModal } from "@/components/EntryFormModal";
+import { EntryListSection } from "@/components/EntryListSection";
 import { AccountTotalsSidebar } from "@/components/AccountTotalsSidebar";
 
 export default async function MonthPage({
@@ -37,11 +30,10 @@ export default async function MonthPage({
   const accounts = accountsRaw.map(serializeAccount);
 
   if (!month) {
-    const previous = await findPreviousMonthWithEntries(key);
     return (
       <div className="space-y-6">
         <MonthNav current={key} />
-        <CreateMonthPrompt monthKey={key} hasPrevious={Boolean(previous)} />
+        <CreateMonthPrompt monthKey={key} />
       </div>
     );
   }
@@ -78,63 +70,31 @@ export default async function MonthPage({
             <StartWithEditor monthId={month.id} value={startWith} />
           </div>
 
-          <section className="card p-4 sm:p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
-                Monthly Debits
-              </h2>
-              <EntryFormModal
-                monthId={month.id}
-                categories={categories}
-                accounts={accounts}
-                defaultType={EntryType.DEBIT}
-                trigger={
-                  <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
-                    + Add debit
-                  </span>
-                }
-              />
-            </div>
-            {debits.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-400">No monthly debits yet.</p>
-            ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {debits.map((entry) => (
-                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} showIcon={showEntryIcons} />
-                ))}
-              </div>
-            )}
-          </section>
+          <EntryListSection
+            monthId={month.id}
+            title="Monthly Debits"
+            addLabel="+ Add debit"
+            emptyLabel="No monthly debits yet."
+            defaultType={EntryType.DEBIT}
+            entries={debits}
+            categories={categories}
+            accounts={accounts}
+            showIcon={showEntryIcons}
+          />
 
           <StatBar label="Total Left After Monthly Debits" amount={leftAfterDebits} color="green" />
 
-          <section className="card p-4 sm:p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
-                Planned Spend
-              </h2>
-              <EntryFormModal
-                monthId={month.id}
-                categories={categories}
-                accounts={accounts}
-                defaultType={EntryType.PLANNED}
-                trigger={
-                  <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700">
-                    + Add planned spend
-                  </span>
-                }
-              />
-            </div>
-            {planned.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-400">No planned spend yet.</p>
-            ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {planned.map((entry) => (
-                  <EntryRow key={entry.id} entry={entry} monthId={month.id} categories={categories} accounts={accounts} showIcon={showEntryIcons} />
-                ))}
-              </div>
-            )}
-          </section>
+          <EntryListSection
+            monthId={month.id}
+            title="Planned Spend"
+            addLabel="+ Add planned spend"
+            emptyLabel="No planned spend yet."
+            defaultType={EntryType.PLANNED}
+            entries={planned}
+            categories={categories}
+            accounts={accounts}
+            showIcon={showEntryIcons}
+          />
 
           <StatBar label="Total Remain After Spends" amount={remainAfterSpends} color="purple" />
         </div>
