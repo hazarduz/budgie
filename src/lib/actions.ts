@@ -30,6 +30,24 @@ function monthPath(year: number, month: number) {
   return `/months/${year}-${String(month).padStart(2, "0")}`;
 }
 
+async function activeMasterBillsAsEntries(
+  userId: string
+): Promise<Prisma.EntryUncheckedCreateWithoutMonthInput[]> {
+  const bills = await prisma.masterBill.findMany({
+    where: { userId, active: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+  return bills.map((b, index) => ({
+    name: b.name,
+    amount: b.amount,
+    type: EntryType.DEBIT,
+    categoryId: b.categoryId,
+    accountId: b.accountId,
+    notes: b.notes,
+    sortOrder: index,
+  }));
+}
+
 export async function createMonth(
   year: number,
   month: number,
@@ -44,23 +62,9 @@ export async function createMonth(
     return { id: existing.id, year: existing.year, month: existing.month };
   }
 
-  let entriesToCreate: Prisma.EntryUncheckedCreateWithoutMonthInput[] = [];
-
-  if (options.populateFromMaster) {
-    const bills = await prisma.masterBill.findMany({
-      where: { userId, active: true },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    entriesToCreate = bills.map((b, index) => ({
-      name: b.name,
-      amount: b.amount,
-      type: EntryType.DEBIT,
-      categoryId: b.categoryId,
-      accountId: b.accountId,
-      notes: b.notes,
-      sortOrder: index,
-    }));
-  }
+  const entriesToCreate = options.populateFromMaster
+    ? await activeMasterBillsAsEntries(userId)
+    : [];
 
   const created = await prisma.month.create({
     data: {
@@ -75,6 +79,28 @@ export async function createMonth(
   revalidatePath("/history");
   revalidatePath(monthPath(year, month));
   return { id: created.id, year: created.year, month: created.month };
+}
+
+// Wipes every entry (Monthly Debits and Planned Spend alike) for a month
+// and re-fills Monthly Debits from the current active Master bills. Leaves
+// Start With untouched — that's a per-month figure Master doesn't track.
+export async function clearAndRefreshMonth(monthId: string) {
+  const { userId } = await verifySession();
+  const month = await prisma.month.findFirst({ where: { id: monthId, userId } });
+  if (!month) throw new Error("Month not found.");
+
+  const entriesToCreate = await activeMasterBillsAsEntries(userId);
+
+  await prisma.$transaction([
+    prisma.entry.deleteMany({ where: { monthId } }),
+    prisma.entry.createMany({
+      data: entriesToCreate.map((e) => ({ ...e, monthId })),
+    }),
+  ]);
+
+  revalidatePath("/history");
+  revalidatePath("/");
+  revalidatePath(monthPath(month.year, month.month));
 }
 
 export async function updateMonthStartWith(monthId: string, startWith: number) {
