@@ -28,7 +28,10 @@ git, so it never has to touch GitHub.
   change it — already-created months keep their own amounts, editable as
   usual, so old months stay accurate for the dashboard's trends. Pause a
   bill instead of deleting it to leave it out of new months without
-  losing it.
+  losing it. Made a mess of a month, or want it to match Master exactly
+  again? "Clear and refresh" on the month wipes every entry in it and
+  refills Monthly Debits from Master — it's behind a type-to-confirm
+  prompt since it can't be undone.
 - **Reorder** — Monthly Debits, Planned Spend, and the Master list can
   all be dragged into whatever order suits you: hit "Reorder" and
   drag by the handle, or "Done" to lock it back in.

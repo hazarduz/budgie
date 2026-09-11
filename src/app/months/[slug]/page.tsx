@@ -10,6 +10,7 @@ import { StatBar } from "@/components/StatBar";
 import { StartWithEditor } from "@/components/StartWithEditor";
 import { EntryListSection } from "@/components/EntryListSection";
 import { AccountTotalsSidebar } from "@/components/AccountTotalsSidebar";
+import { ClearAndRefreshButton } from "@/components/ClearAndRefreshButton";
 
 export default async function MonthPage({
   params,
@@ -57,6 +58,9 @@ export default async function MonthPage({
   return (
     <div className="space-y-6">
       <MonthNav current={key} />
+      <div className="flex justify-end">
+        <ClearAndRefreshButton monthId={month.id} />
+      </div>
 
       <div
         className={clsx(
