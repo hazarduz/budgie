@@ -42,11 +42,11 @@ export function ClearAndRefreshButton({ monthId }: { monthId: string }) {
             <h2 className="mb-2 text-lg font-semibold">Clear and refresh this month?</h2>
             <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
               This deletes every Monthly Debit and Planned Spend entry in this month, then
-              refills Monthly Debits from your current{" "}
+              refills Start With and Monthly Debits from your current{" "}
               <a href="/master" className="underline hover:text-slate-800 dark:hover:text-slate-100">
                 Master
               </a>{" "}
-              list. Start With is left as-is. This can&apos;t be undone.
+              list. This can&apos;t be undone.
             </p>
             <label className="mb-1 block text-xs font-medium text-slate-500">
               Type {CONFIRM_WORD} to confirm

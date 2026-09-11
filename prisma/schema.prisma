@@ -39,6 +39,8 @@ model User {
   showEntryIcons    Boolean            @default(true)
   theme             Theme              @default(SYSTEM)
   avatar            String?            @db.Text
+  // Default Start With amount used when a month is populated from Master.
+  masterStartWith   Decimal            @default(0) @db.Decimal(10, 2)
   createdAt         DateTime           @default(now())
   months            Month[]
   categories        Category[]

@@ -21,17 +21,18 @@ git, so it never has to touch GitHub.
   totals after each, styled after the original spreadsheet's colour-coded
   bars. Entries tagged with an account roll up into a "Transfer To"
   sidebar, so you know at a glance how much needs to move where.
-- **Master** — a single list of your recurring monthly debits (Rent,
-  Council Tax, the phone contract, …). Creating a new month pulls its
-  Monthly Debits from whatever's active here, so you're not retyping the
-  same bills every month. A bill only affects months created *after* you
-  change it — already-created months keep their own amounts, editable as
-  usual, so old months stay accurate for the dashboard's trends. Pause a
-  bill instead of deleting it to leave it out of new months without
-  losing it. Made a mess of a month, or want it to match Master exactly
-  again? "Clear and refresh" on the month wipes every entry in it and
-  refills Monthly Debits from Master — it's behind a type-to-confirm
-  prompt since it can't be undone.
+- **Master** — a single place for your Start With amount and your
+  recurring monthly debits (Rent, Council Tax, the phone contract, …).
+  Creating a new month pulls both from whatever's set here, so you're not
+  retyping the same starting balance and bills every month. A change here
+  only affects months created *after* you make it — already-created
+  months keep their own amounts, editable as usual, so old months stay
+  accurate for the dashboard's trends. Pause a bill instead of deleting it
+  to leave it out of new months without losing it. Made a mess of a
+  month, or want it to match Master exactly again? "Clear and refresh" on
+  the month wipes every entry in it and resets Start With and Monthly
+  Debits from Master — it's behind a type-to-confirm prompt since it
+  can't be undone.
 - **Reorder** — Monthly Debits, Planned Spend, and the Master list can
   all be dragged into whatever order suits you: hit "Reorder" and
   drag by the handle, or "Done" to lock it back in.
