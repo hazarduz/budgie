@@ -12,6 +12,7 @@ export interface BackupUser {
   showEntryIcons: boolean;
   theme: Theme;
   avatar: string | null;
+  masterStartWith: number;
   createdAt: string;
 }
 

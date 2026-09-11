@@ -38,9 +38,9 @@ export function CreateMonthPrompt({ monthKey }: { monthKey: MonthKey }) {
         </button>
       </div>
       <p className="max-w-sm text-xs text-slate-400">
-        &ldquo;Create month&rdquo; fills in Monthly Debits from your{" "}
+        &ldquo;Create month&rdquo; fills in Start With and Monthly Debits from{" "}
         <a href="/master" className="underline hover:text-slate-600 dark:hover:text-slate-300">
-          Master bills
+          Master
         </a>
         . &ldquo;Create blank month&rdquo; starts with nothing.
       </p>

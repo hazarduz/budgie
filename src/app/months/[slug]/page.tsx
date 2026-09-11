@@ -71,7 +71,7 @@ export default async function MonthPage({
         <div className="min-w-0 space-y-6">
           <div className="flex items-center justify-between rounded-xl bg-blue-600 px-4 py-3 text-white shadow-sm">
             <span className="font-semibold tracking-wide">Start With</span>
-            <StartWithEditor monthId={month.id} value={startWith} />
+            <StartWithEditor value={startWith} monthId={month.id} />
           </div>
 
           <EntryListSection

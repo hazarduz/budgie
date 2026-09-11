@@ -62,16 +62,24 @@ export async function createMonth(
     return { id: existing.id, year: existing.year, month: existing.month };
   }
 
-  const entriesToCreate = options.populateFromMaster
-    ? await activeMasterBillsAsEntries(userId)
-    : [];
+  let entriesToCreate: Prisma.EntryUncheckedCreateWithoutMonthInput[] = [];
+  let startWith: Prisma.Decimal | number = 0;
+
+  if (options.populateFromMaster) {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { masterStartWith: true },
+    });
+    entriesToCreate = await activeMasterBillsAsEntries(userId);
+    startWith = user.masterStartWith;
+  }
 
   const created = await prisma.month.create({
     data: {
       userId,
       year,
       month,
-      startWith: 0,
+      startWith,
       entries: { create: entriesToCreate },
     },
   });
@@ -81,14 +89,19 @@ export async function createMonth(
   return { id: created.id, year: created.year, month: created.month };
 }
 
-// Wipes every entry (Monthly Debits and Planned Spend alike) for a month
-// and re-fills Monthly Debits from the current active Master bills. Leaves
-// Start With untouched — that's a per-month figure Master doesn't track.
+// Wipes every entry (Monthly Debits and Planned Spend alike) for a month,
+// re-fills Monthly Debits from the current active Master bills, and resets
+// Start With to Master's default — the same starting point a freshly
+// created month would get.
 export async function clearAndRefreshMonth(monthId: string) {
   const { userId } = await verifySession();
   const month = await prisma.month.findFirst({ where: { id: monthId, userId } });
   if (!month) throw new Error("Month not found.");
 
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { masterStartWith: true },
+  });
   const entriesToCreate = await activeMasterBillsAsEntries(userId);
 
   await prisma.$transaction([
@@ -96,6 +109,7 @@ export async function clearAndRefreshMonth(monthId: string) {
     prisma.entry.createMany({
       data: entriesToCreate.map((e) => ({ ...e, monthId })),
     }),
+    prisma.month.update({ where: { id: monthId }, data: { startWith: user.masterStartWith } }),
   ]);
 
   revalidatePath("/history");
@@ -271,6 +285,21 @@ export async function listMasterBills() {
     include: { category: true, account: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
+}
+
+export async function getMasterStartWith() {
+  const { userId } = await verifySession();
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { masterStartWith: true },
+  });
+  return Number(user.masterStartWith);
+}
+
+export async function updateMasterStartWith(value: number) {
+  const { userId } = await verifySession();
+  await prisma.user.update({ where: { id: userId }, data: { masterStartWith: value } });
+  revalidatePath("/master");
 }
 
 export async function createMasterBill(input: {
@@ -939,6 +968,7 @@ export async function exportBackupData(): Promise<BackupData> {
       showEntryIcons: u.showEntryIcons,
       theme: u.theme,
       avatar: u.avatar,
+      masterStartWith: Number(u.masterStartWith),
       createdAt: u.createdAt.toISOString(),
     })),
     categories: categories.map((c) => ({

@@ -1,10 +1,20 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateMonthStartWith } from "@/lib/actions";
+import { updateMonthStartWith, updateMasterStartWith } from "@/lib/actions";
 import { formatGBP } from "@/lib/format";
 
-export function StartWithEditor({ monthId, value }: { monthId: string; value: number }) {
+// Server action references can't be pre-bound in a Server Component and
+// passed down as a prop (the bound closure doesn't survive serialization),
+// so both possible actions are imported directly here and picked by
+// whether a monthId was given, rather than the caller passing a callback.
+export function StartWithEditor({
+  value,
+  monthId,
+}: {
+  value: number;
+  monthId?: string;
+}) {
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(value.toString());
   const [isPending, startTransition] = useTransition();
@@ -16,7 +26,11 @@ export function StartWithEditor({ monthId, value }: { monthId: string; value: nu
       return;
     }
     startTransition(async () => {
-      await updateMonthStartWith(monthId, num);
+      if (monthId) {
+        await updateMonthStartWith(monthId, num);
+      } else {
+        await updateMasterStartWith(num);
+      }
       setEditing(false);
     });
   }
