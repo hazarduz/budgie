@@ -546,6 +546,7 @@ export async function listBirthdays() {
 export async function createBirthday(input: {
   name: string;
   dateOfBirth: string;
+  relationship?: string | null;
   notes?: string | null;
 }) {
   const { userId } = await verifySession();
@@ -554,6 +555,7 @@ export async function createBirthday(input: {
       userId,
       name: input.name,
       dateOfBirth: new Date(input.dateOfBirth),
+      relationship: input.relationship || null,
       notes: input.notes || null,
     },
   });
@@ -562,7 +564,12 @@ export async function createBirthday(input: {
 
 export async function updateBirthday(
   id: string,
-  input: { name: string; dateOfBirth: string; notes?: string | null }
+  input: {
+    name: string;
+    dateOfBirth: string;
+    relationship?: string | null;
+    notes?: string | null;
+  }
 ) {
   const { userId } = await verifySession();
   await prisma.birthday.updateMany({
@@ -570,6 +577,7 @@ export async function updateBirthday(
     data: {
       name: input.name,
       dateOfBirth: new Date(input.dateOfBirth),
+      relationship: input.relationship || null,
       notes: input.notes || null,
     },
   });
@@ -1120,6 +1128,7 @@ export async function exportBackupData(): Promise<BackupData> {
       userId: b.userId,
       name: b.name,
       dateOfBirth: b.dateOfBirth.toISOString(),
+      relationship: b.relationship,
       notes: b.notes,
       sortOrder: b.sortOrder,
       createdAt: b.createdAt.toISOString(),

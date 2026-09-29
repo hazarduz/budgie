@@ -4,6 +4,25 @@ import { useState, useTransition, type ReactNode } from "react";
 import { createBirthday, deleteBirthday, updateBirthday } from "@/lib/actions";
 import type { PlainBirthday } from "@/lib/serialize";
 
+const COMMON_RELATIONSHIPS = [
+  "Mother",
+  "Father",
+  "Wife",
+  "Husband",
+  "Son",
+  "Daughter",
+  "Sister",
+  "Brother",
+  "Nephew",
+  "Niece",
+  "Grandmother",
+  "Grandfather",
+  "Aunt",
+  "Uncle",
+  "Cousin",
+  "Friend",
+];
+
 export function BirthdayFormModal({
   birthday,
   trigger,
@@ -18,15 +37,16 @@ export function BirthdayFormModal({
   function handleSubmit(formData: FormData) {
     const name = String(formData.get("name") ?? "").trim();
     const dateOfBirth = String(formData.get("dateOfBirth") ?? "").trim();
+    const relationship = String(formData.get("relationship") ?? "").trim() || null;
     const notes = String(formData.get("notes") ?? "").trim() || null;
 
     if (!name || !dateOfBirth) return;
 
     startTransition(async () => {
       if (isEdit && birthday) {
-        await updateBirthday(birthday.id, { name, dateOfBirth, notes });
+        await updateBirthday(birthday.id, { name, dateOfBirth, relationship, notes });
       } else {
-        await createBirthday({ name, dateOfBirth, notes });
+        await createBirthday({ name, dateOfBirth, relationship, notes });
       }
       setOpen(false);
     });
@@ -76,6 +96,22 @@ export function BirthdayFormModal({
                   defaultValue={birthday?.dateOfBirth ? birthday.dateOfBirth.slice(0, 10) : ""}
                   className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
                 />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Relationship</label>
+                <input
+                  name="relationship"
+                  list="relationship-suggestions"
+                  defaultValue={birthday?.relationship ?? ""}
+                  placeholder="e.g. Mother, Friend"
+                  className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-teal-500"
+                />
+                <datalist id="relationship-suggestions">
+                  {COMMON_RELATIONSHIPS.map((r) => (
+                    <option key={r} value={r} />
+                  ))}
+                </datalist>
               </div>
 
               <div>

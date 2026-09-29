@@ -122,6 +122,7 @@ export interface PlainBirthday {
   name: string;
   dateOfBirth: string;
   age: number;
+  relationship: string | null;
   notes: string | null;
 }
 
@@ -131,6 +132,7 @@ export function serializeBirthday(birthday: Birthday): PlainBirthday {
     name: birthday.name,
     dateOfBirth: birthday.dateOfBirth.toISOString(),
     age: calculateAge(birthday.dateOfBirth),
+    relationship: birthday.relationship,
     notes: birthday.notes,
   };
 }
