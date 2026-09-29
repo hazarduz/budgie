@@ -77,7 +77,9 @@ git, so it never has to touch GitHub.
 
 - **Birthdays** — a list of people and their date of birth, with their
   current age worked out for you automatically (and a callout if it's
-  their birthday today).
+  their birthday today). Tag each person with a relationship (Mother,
+  Friend, …, with common ones suggested as you type, or your own) and
+  sort the list by name, date of birth, or age, ascending or descending.
 - **Logins** — everything above is private per person. Log in to see
   only your own months, categories, and Christmas list; nobody else's data
   is visible to you. The first login anyone creates becomes an

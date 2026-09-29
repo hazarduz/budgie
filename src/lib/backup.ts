@@ -113,6 +113,7 @@ export interface BackupBirthday {
   userId: string;
   name: string;
   dateOfBirth: string;
+  relationship: string | null;
   notes: string | null;
   sortOrder: number;
   createdAt: string;

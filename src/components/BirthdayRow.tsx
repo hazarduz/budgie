@@ -20,6 +20,11 @@ export function BirthdayRow({ birthday }: { birthday: PlainBirthday }) {
                 🎂
               </span>
               <span className="truncate font-medium">{birthday.name}</span>
+              {birthday.relationship && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-white/10 dark:text-slate-300">
+                  {birthday.relationship}
+                </span>
+              )}
               {isToday(birthday.dateOfBirth) && (
                 <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
                   Today!
