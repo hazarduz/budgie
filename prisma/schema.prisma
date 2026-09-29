@@ -49,6 +49,7 @@ model User {
   christmasSettings ChristmasSettings?
   debts             Debt[]
   masterBills       MasterBill[]
+  birthdays         Birthday[]
 }
 
 model Category {
@@ -157,6 +158,20 @@ model ChristmasEntry {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Birthday {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  name        String
+  dateOfBirth DateTime @db.Date
+  notes       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
 }

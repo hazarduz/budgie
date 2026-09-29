@@ -533,6 +533,55 @@ export async function deleteChristmasEntry(id: string) {
   revalidatePath("/christmas");
 }
 
+// ---------- Birthdays ----------
+
+export async function listBirthdays() {
+  const { userId } = await verifySession();
+  return prisma.birthday.findMany({
+    where: { userId },
+    orderBy: [{ dateOfBirth: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function createBirthday(input: {
+  name: string;
+  dateOfBirth: string;
+  notes?: string | null;
+}) {
+  const { userId } = await verifySession();
+  await prisma.birthday.create({
+    data: {
+      userId,
+      name: input.name,
+      dateOfBirth: new Date(input.dateOfBirth),
+      notes: input.notes || null,
+    },
+  });
+  revalidatePath("/birthdays");
+}
+
+export async function updateBirthday(
+  id: string,
+  input: { name: string; dateOfBirth: string; notes?: string | null }
+) {
+  const { userId } = await verifySession();
+  await prisma.birthday.updateMany({
+    where: { id, userId },
+    data: {
+      name: input.name,
+      dateOfBirth: new Date(input.dateOfBirth),
+      notes: input.notes || null,
+    },
+  });
+  revalidatePath("/birthdays");
+}
+
+export async function deleteBirthday(id: string) {
+  const { userId } = await verifySession();
+  await prisma.birthday.deleteMany({ where: { id, userId } });
+  revalidatePath("/birthdays");
+}
+
 // ---------- Debts ----------
 
 export async function listDebts() {
@@ -943,18 +992,29 @@ export async function changeOwnPassword(
 export async function exportBackupData(): Promise<BackupData> {
   await requireAdmin();
 
-  const [users, categories, accounts, months, entries, christmasSettings, christmasEntries, debts, masterBills] =
-    await Promise.all([
-      prisma.user.findMany(),
-      prisma.category.findMany(),
-      prisma.account.findMany(),
-      prisma.month.findMany(),
-      prisma.entry.findMany(),
-      prisma.christmasSettings.findMany(),
-      prisma.christmasEntry.findMany(),
-      prisma.debt.findMany(),
-      prisma.masterBill.findMany(),
-    ]);
+  const [
+    users,
+    categories,
+    accounts,
+    months,
+    entries,
+    christmasSettings,
+    christmasEntries,
+    debts,
+    masterBills,
+    birthdays,
+  ] = await Promise.all([
+    prisma.user.findMany(),
+    prisma.category.findMany(),
+    prisma.account.findMany(),
+    prisma.month.findMany(),
+    prisma.entry.findMany(),
+    prisma.christmasSettings.findMany(),
+    prisma.christmasEntry.findMany(),
+    prisma.debt.findMany(),
+    prisma.masterBill.findMany(),
+    prisma.birthday.findMany(),
+  ]);
 
   return {
     app: "budgie",
@@ -1055,6 +1115,16 @@ export async function exportBackupData(): Promise<BackupData> {
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })),
+    birthdays: birthdays.map((b) => ({
+      id: b.id,
+      userId: b.userId,
+      name: b.name,
+      dateOfBirth: b.dateOfBirth.toISOString(),
+      notes: b.notes,
+      sortOrder: b.sortOrder,
+      createdAt: b.createdAt.toISOString(),
+      updatedAt: b.updatedAt.toISOString(),
+    })),
   };
 }
 
@@ -1142,6 +1212,14 @@ export async function restoreBackup(
       await tx.masterBill.createMany({
         data: data.masterBills.map((b) => ({
           ...b,
+          createdAt: new Date(b.createdAt),
+          updatedAt: new Date(b.updatedAt),
+        })),
+      });
+      await tx.birthday.createMany({
+        data: data.birthdays.map((b) => ({
+          ...b,
+          dateOfBirth: new Date(b.dateOfBirth),
           createdAt: new Date(b.createdAt),
           updatedAt: new Date(b.updatedAt),
         })),

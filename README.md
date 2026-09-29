@@ -75,6 +75,9 @@ git, so it never has to touch GitHub.
 
   ![Christmas](docs/screenshots/christmas.png)
 
+- **Birthdays** — a list of people and their date of birth, with their
+  current age worked out for you automatically (and a callout if it's
+  their birthday today).
 - **Logins** — everything above is private per person. Log in to see
   only your own months, categories, and Christmas list; nobody else's data
   is visible to you. The first login anyone creates becomes an
@@ -86,8 +89,8 @@ git, so it never has to touch GitHub.
   and change your own password.
 - **Backup & restore** — the admin can download a single JSON file with
   everything in Budgie (every user's months, Master bills, categories,
-  accounts, debts, and Christmas lists) from Settings → Backup, and
-  restore it again later
+  accounts, debts, birthdays, and Christmas lists) from Settings →
+  Backup, and restore it again later
   — on the same install or a fresh one. Restoring is also offered right on
   the "Create the first account" screen, so recovering after losing the
   database entirely doesn't require an account to already exist.

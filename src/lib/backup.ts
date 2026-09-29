@@ -2,7 +2,7 @@ import type { Role, EntryType, DebtDirection, Theme } from "@prisma/client";
 
 // Bumped whenever the shape below changes in a way that breaks restoring an
 // older export.
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 export interface BackupUser {
   id: string;
@@ -108,6 +108,17 @@ export interface BackupMasterBill {
   updatedAt: string;
 }
 
+export interface BackupBirthday {
+  id: string;
+  userId: string;
+  name: string;
+  dateOfBirth: string;
+  notes: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BackupData {
   app: "budgie";
   version: typeof BACKUP_VERSION;
@@ -121,6 +132,7 @@ export interface BackupData {
   christmasEntries: BackupChristmasEntry[];
   debts: BackupDebt[];
   masterBills: BackupMasterBill[];
+  birthdays: BackupBirthday[];
 }
 
 // A structural check, not full schema validation — this file format is only
@@ -140,6 +152,7 @@ export function isValidBackup(data: unknown): data is BackupData {
     Array.isArray(d.christmasSettings) &&
     Array.isArray(d.christmasEntries) &&
     Array.isArray(d.debts) &&
-    Array.isArray(d.masterBills)
+    Array.isArray(d.masterBills) &&
+    Array.isArray(d.birthdays)
   );
 }

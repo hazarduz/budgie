@@ -1,5 +1,6 @@
 import type {
   Account,
+  Birthday,
   Category,
   ChristmasEntry,
   Debt,
@@ -8,6 +9,7 @@ import type {
   EntryType,
   MasterBill,
 } from "@prisma/client";
+import { calculateAge } from "@/lib/format";
 
 export interface PlainCategory {
   id: string;
@@ -112,6 +114,24 @@ export function serializeMasterBill(
       : null,
     notes: bill.notes,
     active: bill.active,
+  };
+}
+
+export interface PlainBirthday {
+  id: string;
+  name: string;
+  dateOfBirth: string;
+  age: number;
+  notes: string | null;
+}
+
+export function serializeBirthday(birthday: Birthday): PlainBirthday {
+  return {
+    id: birthday.id,
+    name: birthday.name,
+    dateOfBirth: birthday.dateOfBirth.toISOString(),
+    age: calculateAge(birthday.dateOfBirth),
+    notes: birthday.notes,
   };
 }
 

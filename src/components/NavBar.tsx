@@ -15,6 +15,7 @@ export async function NavBar() {
     { href: "/dashboard", label: "Dashboard" },
     { href: "/history", label: "History" },
     { href: "/christmas", label: "Christmas" },
+    { href: "/birthdays", label: "Birthdays" },
     { href: "/debts", label: "Debts" },
     { href: "/settings", label: "Settings" },
   ];
